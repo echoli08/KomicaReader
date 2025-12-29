@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Komica Reader</string>
+    <string name="enter_keyword">請輸入搜尋關鍵字</string>
+    <string name="found_results">找到 %d 個結果</string>
+    <string name="no_results">未找到相關結果</string>
+    <string name="search_button">搜尋</string>
+    <string name="search_failed">搜尋失敗: %s</string>
+    <string name="search_hint">輸入搜尋關鍵字</string>
+    <string name="select_board_hint">選擇要搜尋的看板</string>
+    <string name="welcome_message">Welcome to Komica Reader</string>
+    <style name="Base.Theme.KomicaReader" parent="Theme.AppCompat.Light.DarkActionBar"/>
+</resources>

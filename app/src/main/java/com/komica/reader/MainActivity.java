@@ -127,7 +127,7 @@ public class MainActivity extends AppCompatActivity {
         progressBar.setVisibility(View.VISIBLE);
         executor.execute(() -> {
             try {
-                KomicaService.SearchTask task = new KomicaService.SearchTask(board.getUrl(), query);
+                KomicaService.SearchTask task = new KomicaService.SearchTask(query);
                 List<Thread> results = task.call();
 
                 runOnUiThread(() -> {

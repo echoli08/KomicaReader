@@ -11,6 +11,10 @@ import java.util.concurrent.Callable;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import com.komica.reader.model.Board;
+import com.komica.reader.model.BoardCategory;
+import com.komica.reader.model.Thread;
+import com.komica.reader.model.Post;
 
 public class KomicaService {
     private static final String BASE_URL = "https://komica1.org";
