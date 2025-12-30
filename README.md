@@ -1,7 +1,13 @@
 # Komica Reader
 
-這是我基於研究興趣利用OpenCode作出來的K島閱讀器，
-加上我對Github的不熟悉，所以基本上應該會有不少問題
+
+<br>因K島實在是找不到簡單實用的APP，以前常用的也都不能用了，
+<br>導致在手機上只能透過網頁看K島，
+<br>於是我基於研究興趣利用Codex以及OpenCode作出來的K島閱讀器，
+<br>接下來會嘗試用Gemini來接續後續處理，
+<br>另外雖然會寫cobol跟c#但我對於java以及android其實是一竅不通的，
+<br>所以有問題我也會繼續透過這方式來實作跟修正，翻車機率很高。
+
 
 A native Android application for browsing Komica anonymous discussion boards.
 

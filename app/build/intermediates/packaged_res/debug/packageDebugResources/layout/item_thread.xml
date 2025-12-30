@@ -14,33 +14,39 @@
         android:padding="8dp">
 
         <TextView
+            android:id="@+id/threadPostNumber"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="11sp"
+            android:textColor="#999999"
+            android:textStyle="bold" />
+
+        <TextView
             android:id="@+id/threadTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
             android:textSize="16sp"
             android:textColor="#212121"
             android:textStyle="bold" />
 
-        <LinearLayout
+        <TextView
+            android:id="@+id/threadAuthor"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="4dp">
-            <TextView
-                android:id="@+id/threadAuthor"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:textSize="12sp"
-                android:textColor="#666666" />
+            android:layout_marginTop="4dp"
+            android:textSize="12sp"
+            android:textColor="#666666" />
 
-            <TextView
-                android:id="@+id/replyCount"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="12sp"
-                android:textColor="#666666" />
-        </LinearLayout>
+        <TextView
+            android:id="@+id/contentPreview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textSize="12sp"
+            android:textColor="#424242"
+            android:maxLines="4"
+            android:ellipsize="end" />
 
         <TextView
             android:id="@+id/lastReplyTime"

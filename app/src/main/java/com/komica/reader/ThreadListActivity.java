@@ -8,6 +8,7 @@ import android.text.TextWatcher;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -17,6 +18,7 @@ import com.komica.reader.adapter.ThreadAdapter;
 import com.komica.reader.model.Board;
 import com.komica.reader.model.Thread;
 import com.komica.reader.service.KomicaService;
+import com.komica.reader.util.FavoritesManager;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -41,12 +43,16 @@ public class ThreadListActivity extends AppCompatActivity {
     private boolean hasMore = true;
     private EditText searchEditText;
     private Button sortButton;
+    private ImageButton favoriteButton;
     private String currentSearchQuery = "";
+    private FavoritesManager favoritesManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_thread_list);
+
+        favoritesManager = FavoritesManager.getInstance(this);
 
         currentBoard = (Board) getIntent().getSerializableExtra("board");
 
@@ -54,6 +60,7 @@ public class ThreadListActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
         searchEditText = findViewById(R.id.searchEditText);
         sortButton = findViewById(R.id.sortButton);
+        favoriteButton = findViewById(R.id.favoriteButton);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter = new ThreadAdapter(threads, thread -> {
@@ -66,9 +73,31 @@ public class ThreadListActivity extends AppCompatActivity {
         setupScrollListener();
         setupSearchListener();
         setupSortListener();
+        setupFavoriteListener();
 
         if (currentBoard != null) {
+            updateFavoriteIcon();
             loadThreads(0);
+        }
+    }
+
+    private void setupFavoriteListener() {
+        favoriteButton.setOnClickListener(v -> {
+            if (currentBoard != null) {
+                favoritesManager.toggleFavorite(currentBoard.getUrl());
+                updateFavoriteIcon();
+            }
+        });
+    }
+
+    private void updateFavoriteIcon() {
+        if (currentBoard != null) {
+            boolean isFavorite = favoritesManager.isFavorite(currentBoard.getUrl());
+            if (isFavorite) {
+                favoriteButton.setImageResource(R.drawable.ic_star);
+            } else {
+                favoriteButton.setImageResource(R.drawable.ic_star_border);
+            }
         }
     }
 

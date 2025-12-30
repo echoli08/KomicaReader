@@ -1,8 +1,18 @@
 R_DEF: Internal format may change without notice
 local
+drawable ic_expand_less
+drawable ic_expand_more
+drawable ic_launcher
+drawable ic_star
+drawable ic_star_border
 id boardName
 id boardsRecyclerView
+id categoryHeader
 id categoryName
+id contentPreview
+id expandIcon
+id favoriteButton
+id favoriteIcon
 id imageCounter
 id imagePreview
 id lastReplyTime
@@ -13,11 +23,12 @@ id postNumber
 id postTime
 id progressBar
 id recyclerView
-id replyCount
-id searchButton
+id scrollToBottomButton
 id searchEditText
+id shareButton
 id sortButton
 id threadAuthor
+id threadPostNumber
 id threadTitle
 id viewPager
 layout activity_image_preview
@@ -31,6 +42,7 @@ layout item_post
 layout item_thread
 string app_name
 string enter_keyword
+string expand
 string found_results
 string no_results
 string search_button

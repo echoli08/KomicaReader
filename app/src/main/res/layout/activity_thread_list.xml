@@ -8,7 +8,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="8dp">
+        android:padding="8dp"
+        android:gravity="center_vertical">
 
         <EditText
             android:id="@+id/searchEditText"
@@ -17,7 +18,7 @@
             android:layout_weight="1"
             android:hint="搜尋主題"
             android:inputType="text"
-            android:padding="8dp"
+            android:padding="10dp"
             android:background="@android:drawable/edit_text" />
 
         <Button
@@ -26,6 +27,17 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text="排序" />
+
+        <ImageButton
+            android:id="@+id/favoriteButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="4dp"
+            android:src="@drawable/ic_star_border"
+            android:background="?android:attr/selectableItemBackground"
+            android:contentDescription="加入最愛"
+            android:scaleType="centerInside"
+            android:padding="8dp" />
 
     </LinearLayout>
 

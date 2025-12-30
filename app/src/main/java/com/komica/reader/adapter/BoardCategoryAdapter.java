@@ -17,14 +17,16 @@ public class BoardCategoryAdapter extends RecyclerView.Adapter<BoardCategoryAdap
 
     private List<BoardCategory> categories;
     private OnBoardClickListener onBoardClickListener;
+    private BoardAdapter.OnFavoriteClickListener onFavoriteClickListener;
 
     public interface OnBoardClickListener {
         void onBoardClick(Board board);
     }
 
-    public BoardCategoryAdapter(List<BoardCategory> categories, OnBoardClickListener listener) {
+    public BoardCategoryAdapter(List<BoardCategory> categories, OnBoardClickListener listener, BoardAdapter.OnFavoriteClickListener favoriteListener) {
         this.categories = categories;
         this.onBoardClickListener = listener;
+        this.onFavoriteClickListener = favoriteListener;
     }
 
     @NonNull
@@ -77,7 +79,7 @@ public class BoardCategoryAdapter extends RecyclerView.Adapter<BoardCategoryAdap
                 boardsRecyclerView.setVisibility(View.GONE);
             }
 
-            BoardAdapter boardAdapter = new BoardAdapter(category.getBoards(), onBoardClickListener);
+            BoardAdapter boardAdapter = new BoardAdapter(category.getBoards(), onBoardClickListener, onFavoriteClickListener);
             boardsRecyclerView.setAdapter(boardAdapter);
         }
     }
