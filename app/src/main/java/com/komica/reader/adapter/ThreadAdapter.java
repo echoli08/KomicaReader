@@ -44,26 +44,35 @@ public class ThreadAdapter extends RecyclerView.Adapter<ThreadAdapter.ThreadView
     }
 
     class ThreadViewHolder extends RecyclerView.ViewHolder {
+        private TextView threadPostNumber;
         private TextView threadTitle;
         private TextView threadAuthor;
-        private TextView replyCount;
+        private TextView contentPreview;
         private TextView lastReplyTime;
 
         public ThreadViewHolder(@NonNull View itemView) {
             super(itemView);
+            threadPostNumber = itemView.findViewById(R.id.threadPostNumber);
             threadTitle = itemView.findViewById(R.id.threadTitle);
             threadAuthor = itemView.findViewById(R.id.threadAuthor);
-            replyCount = itemView.findViewById(R.id.replyCount);
+            contentPreview = itemView.findViewById(R.id.contentPreview);
             lastReplyTime = itemView.findViewById(R.id.lastReplyTime);
         }
 
         public void bind(Thread thread) {
+            threadPostNumber.setText("No. " + thread.getPostNumber());
             threadTitle.setText(thread.getTitle());
-            threadAuthor.setText("Author: " + thread.getAuthor());
-            replyCount.setText("Replies: " + thread.getReplyCount());
-            
+            threadAuthor.setText(thread.getAuthor());
+
+            if (thread.getContentPreview() != null && !thread.getContentPreview().isEmpty()) {
+                contentPreview.setText(thread.getContentPreview());
+                contentPreview.setVisibility(View.VISIBLE);
+            } else {
+                contentPreview.setVisibility(View.GONE);
+            }
+ 
             if (thread.getLastReplyTime() != null && !thread.getLastReplyTime().isEmpty()) {
-                lastReplyTime.setText("Last: " + thread.getLastReplyTime());
+                lastReplyTime.setText(thread.getLastReplyTime());
                 lastReplyTime.setVisibility(View.VISIBLE);
             } else {
                 lastReplyTime.setVisibility(View.GONE);

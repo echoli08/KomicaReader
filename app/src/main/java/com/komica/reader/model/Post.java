@@ -9,11 +9,12 @@ public class Post {
     private String time;
     private int number;
 
-    public Post(String id, String author, String content, String imageUrl, String time, int number) {
+    public Post(String id, String author, String content, String imageUrl, String thumbnailUrl, String time, int number) {
         this.id = id;
         this.author = author;
         this.content = content;
         this.imageUrl = imageUrl;
+        this.thumbnailUrl = thumbnailUrl;
         this.time = time;
         this.number = number;
     }

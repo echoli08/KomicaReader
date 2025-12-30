@@ -5,11 +5,13 @@ import java.util.List;
 
 public class Thread implements Serializable {
     private String id;
+    private int postNumber;
     private String title;
     private String author;
     private int replyCount;
     private String imageUrl;
     private String content;
+    private String contentPreview;
     private String url;
     private String lastReplyTime;
     private List<Post> posts;
@@ -28,6 +30,14 @@ public class Thread implements Serializable {
 
     public void setId(String id) {
         this.id = id;
+    }
+
+    public int getPostNumber() {
+        return postNumber;
+    }
+
+    public void setPostNumber(int postNumber) {
+        this.postNumber = postNumber;
     }
 
     public String getTitle() {
@@ -68,6 +78,14 @@ public class Thread implements Serializable {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public String getContentPreview() {
+        return contentPreview;
+    }
+
+    public void setContentPreview(String contentPreview) {
+        this.contentPreview = contentPreview;
     }
 
     public String getUrl() {

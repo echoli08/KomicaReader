@@ -20,7 +20,9 @@ import com.komica.reader.service.KomicaService;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -31,6 +33,7 @@ public class ThreadListActivity extends AppCompatActivity {
     private ThreadAdapter adapter;
     private List<Thread> threads = new ArrayList<>();
     private List<Thread> allThreads = new ArrayList<>();
+    private Set<String> existingThreadUrls = new HashSet<>();
     private ExecutorService executor = Executors.newSingleThreadExecutor();
     private Board currentBoard;
     private int currentPage = 0;
@@ -79,8 +82,12 @@ public class ThreadListActivity extends AppCompatActivity {
                     int totalItemCount = layoutManager.getItemCount();
                     int firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition();
 
+                    System.out.println("Scroll - visible: " + visibleItemCount + ", total: " + totalItemCount + ", firstVisible: " + firstVisibleItemPosition);
+                    System.out.println("Scroll - isLoading: " + isLoading + ", hasMore: " + hasMore);
+
                     if (!isLoading && hasMore) {
                         if ((visibleItemCount + firstVisibleItemPosition) >= totalItemCount - 5) {
+                            System.out.println("Triggering load more threads");
                             loadMoreThreads();
                         }
                     }
@@ -110,20 +117,16 @@ public class ThreadListActivity extends AppCompatActivity {
     }
 
     private void showSortDialog() {
-        String[] sortOptions = {"預設順序", "最新回覆時間", "最新發表"};
+        String[] sortOptions = {"最新發表", "最新回覆時間"};
         new AlertDialog.Builder(this)
                 .setTitle("選擇排序方式")
                 .setItems(sortOptions, (dialog, which) -> {
                     switch (which) {
                         case 0:
-                            threads.clear();
-                            threads.addAll(allThreads);
+                            sortThreadsByLatest();
                             break;
                         case 1:
                             sortThreadsByLastReply();
-                            break;
-                        case 2:
-                            sortThreadsByLatest();
                             break;
                     }
                     filterThreads();
@@ -142,7 +145,7 @@ public class ThreadListActivity extends AppCompatActivity {
     }
 
     private void sortThreadsByLatest() {
-        Collections.sort(allThreads, Comparator.comparing(Thread::getId).reversed());
+        Collections.sort(allThreads, Comparator.comparing(Thread::getPostNumber).reversed());
     }
 
     private void filterThreads() {
@@ -165,24 +168,49 @@ public class ThreadListActivity extends AppCompatActivity {
         isLoading = true;
         progressBar.setVisibility(View.VISIBLE);
         System.out.println("Loading page: " + page + ", current board URL: " + currentBoard.getUrl());
+        System.out.println("Current threads count: " + allThreads.size());
         executor.execute(() -> {
             try {
                 KomicaService.FetchThreadsTask task = new KomicaService.FetchThreadsTask(currentBoard.getUrl(), page);
                 List<Thread> newThreads = task.call();
 
+                System.out.println("Received " + (newThreads != null ? newThreads.size() : 0) + " threads from page " + page);
+
                 runOnUiThread(() -> {
                     if (newThreads == null || newThreads.isEmpty()) {
                         hasMore = false;
-                        System.out.println("Page " + page + " has no more threads");
+                        System.out.println("Page " + page + " has no more threads, stopping pagination");
                         progressBar.setVisibility(View.GONE);
                         isLoading = false;
                     } else {
-                        currentPage = page;
-                        allThreads.addAll(newThreads);
-                        filterThreads();
-                        System.out.println("Added " + newThreads.size() + " threads from page " + page);
-                        progressBar.setVisibility(View.GONE);
-                        isLoading = false;
+                        List<Thread> uniqueThreads = new ArrayList<>();
+                        for (Thread thread : newThreads) {
+                            if (!existingThreadUrls.contains(thread.getUrl())) {
+                                existingThreadUrls.add(thread.getUrl());
+                                uniqueThreads.add(thread);
+                                System.out.println("Added unique thread: " + thread.getTitle());
+                            } else {
+                                System.out.println("Skipped duplicate thread: " + thread.getTitle());
+                            }
+                        }
+
+                        System.out.println("Unique threads from page " + page + ": " + uniqueThreads.size());
+
+                        if (uniqueThreads.isEmpty()) {
+                            System.out.println("Page " + page + " contains only duplicate threads, trying next page");
+                            currentPage = page;
+                            progressBar.setVisibility(View.GONE);
+                            isLoading = false;
+                            recyclerView.postDelayed(() -> loadMoreThreads(), 500);
+                        } else {
+                            currentPage = page;
+                            allThreads.addAll(uniqueThreads);
+                            sortThreadsByLatest();
+                            filterThreads();
+                            System.out.println("Total threads after adding page " + page + ": " + allThreads.size());
+                            progressBar.setVisibility(View.GONE);
+                            isLoading = false;
+                        }
                     }
                 });
             } catch (Exception e) {

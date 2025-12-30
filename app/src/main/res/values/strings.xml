@@ -2,4 +2,5 @@
 <resources>
     <string name="app_name">Komica Reader</string>
     <string name="welcome_message">Welcome to Komica Reader</string>
+    <string name="expand">Expand</string>
 </resources>
