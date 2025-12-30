@@ -350,8 +350,24 @@ public class KomicaService {
                 }
                 
                 Elements replyPosts = threadElement.select("div.post.reply");
-                replyCount = replyPosts.size() - 1;
-                if (replyCount < 0) replyCount = 0;
+                int visibleReplyCount = replyPosts.size();
+                
+                int omittedCount = 0;
+                Element warnElement = threadElement.selectFirst("span.warn_txt2");
+                if (warnElement != null) {
+                    String warnText = warnElement.text();
+                    try {
+                        // Text format is usually "有 19 篇回應被省略。"
+                        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d+)").matcher(warnText);
+                        if (matcher.find()) {
+                            omittedCount = Integer.parseInt(matcher.group(1));
+                        }
+                    } catch (Exception e) {
+                        android.util.Log.e("Komica", "Error parsing omitted count: " + e.getMessage());
+                    }
+                }
+                
+                replyCount = visibleReplyCount + omittedCount;
 
                  if (!replyPosts.isEmpty()) {
                     int lastIndex = replyPosts.size() - 1;

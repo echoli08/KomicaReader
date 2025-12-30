@@ -49,6 +49,7 @@ public class ThreadAdapter extends RecyclerView.Adapter<ThreadAdapter.ThreadView
         private TextView threadAuthor;
         private TextView contentPreview;
         private TextView lastReplyTime;
+        private TextView replyCount;
 
         public ThreadViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -57,12 +58,14 @@ public class ThreadAdapter extends RecyclerView.Adapter<ThreadAdapter.ThreadView
             threadAuthor = itemView.findViewById(R.id.threadAuthor);
             contentPreview = itemView.findViewById(R.id.contentPreview);
             lastReplyTime = itemView.findViewById(R.id.lastReplyTime);
+            replyCount = itemView.findViewById(R.id.replyCount);
         }
 
         public void bind(Thread thread) {
             threadPostNumber.setText("No. " + thread.getPostNumber());
             threadTitle.setText(thread.getTitle());
             threadAuthor.setText(thread.getAuthor());
+            replyCount.setText("回覆: " + thread.getReplyCount());
 
             if (thread.getContentPreview() != null && !thread.getContentPreview().isEmpty()) {
                 contentPreview.setText(thread.getContentPreview());

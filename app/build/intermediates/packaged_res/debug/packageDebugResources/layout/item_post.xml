@@ -46,6 +46,7 @@
         android:layout_marginTop="8dp"
         android:scaleType="fitCenter"
         android:adjustViewBounds="true"
+        android:maxHeight="300dp"
         android:visibility="gone" />
 
     <TextView

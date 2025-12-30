@@ -158,7 +158,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                 postImage.setVisibility(View.VISIBLE);
                 Glide.with(itemView.getContext())
                         .load(post.getThumbnailUrl())
-                        .override(400, 400)
                         .error(android.R.drawable.ic_menu_gallery)
                         .placeholder(android.R.drawable.ic_menu_gallery)
                         .into(postImage);

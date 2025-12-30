@@ -23,6 +23,7 @@ id postNumber
 id postTime
 id progressBar
 id recyclerView
+id replyCount
 id scrollToBottomButton
 id searchEditText
 id shareButton
