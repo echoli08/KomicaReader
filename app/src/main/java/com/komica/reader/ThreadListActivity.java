@@ -43,6 +43,7 @@ public class ThreadListActivity extends AppCompatActivity {
     private boolean hasMore = true;
     private EditText searchEditText;
     private Button sortButton;
+    private Button filterButton;
     private ImageButton favoriteButton;
     private String currentSearchQuery = "";
     private FavoritesManager favoritesManager;
@@ -60,25 +61,45 @@ public class ThreadListActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
         searchEditText = findViewById(R.id.searchEditText);
         sortButton = findViewById(R.id.sortButton);
+        filterButton = findViewById(R.id.filterButton);
         favoriteButton = findViewById(R.id.favoriteButton);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new ThreadAdapter(threads, thread -> {
-            Intent intent = new Intent(ThreadListActivity.this, ThreadDetailActivity.class);
-            intent.putExtra("thread", thread);
-            startActivity(intent);
+        adapter = new ThreadAdapter(threads, new ThreadAdapter.OnThreadClickListener() {
+            @Override
+            public void onThreadClick(Thread thread) {
+                Intent intent = new Intent(ThreadListActivity.this, ThreadDetailActivity.class);
+                intent.putExtra("thread", thread);
+                startActivity(intent);
+            }
+
+            @Override
+            public void onShareClick(Thread thread) {
+                shareThread(thread);
+            }
         });
         recyclerView.setAdapter(adapter);
 
         setupScrollListener();
         setupSearchListener();
         setupSortListener();
+        setupFilterButton();
         setupFavoriteListener();
 
         if (currentBoard != null) {
             updateFavoriteIcon();
             loadThreads(0);
         }
+    }
+
+    private void shareThread(Thread thread) {
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        
+        String shareText = thread.getTitle() + "\n" + thread.getUrl();
+        shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
+        
+        startActivity(Intent.createChooser(shareIntent, "分享討論串"));
     }
 
     private void setupFavoriteListener() {
@@ -101,6 +122,14 @@ public class ThreadListActivity extends AppCompatActivity {
         }
     }
 
+    private void setupFilterButton() {
+        filterButton.setOnClickListener(v -> {
+            filterThreads();
+            android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+        });
+    }
+
     private void setupScrollListener() {
         LinearLayoutManager layoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
         recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
@@ -111,12 +140,8 @@ public class ThreadListActivity extends AppCompatActivity {
                     int totalItemCount = layoutManager.getItemCount();
                     int firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition();
 
-                    System.out.println("Scroll - visible: " + visibleItemCount + ", total: " + totalItemCount + ", firstVisible: " + firstVisibleItemPosition);
-                    System.out.println("Scroll - isLoading: " + isLoading + ", hasMore: " + hasMore);
-
-                    if (!isLoading && hasMore) {
+                    if (!isLoading && hasMore && currentSearchQuery.isEmpty()) { // Only load more if not filtering
                         if ((visibleItemCount + firstVisibleItemPosition) >= totalItemCount - 5) {
-                            System.out.println("Triggering load more threads");
                             loadMoreThreads();
                         }
                     }
@@ -126,6 +151,16 @@ public class ThreadListActivity extends AppCompatActivity {
     }
 
     private void setupSearchListener() {
+        searchEditText.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                filterThreads();
+                android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+                return true;
+            }
+            return false;
+        });
+
         searchEditText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -183,7 +218,8 @@ public class ThreadListActivity extends AppCompatActivity {
             threads.addAll(allThreads);
         } else {
             for (Thread thread : allThreads) {
-                if (thread.getTitle().toLowerCase().contains(currentSearchQuery)) {
+                if (thread.getTitle().toLowerCase().contains(currentSearchQuery) || 
+                    thread.getContentPreview().toLowerCase().contains(currentSearchQuery)) {
                     threads.add(thread);
                 }
             }
@@ -196,19 +232,14 @@ public class ThreadListActivity extends AppCompatActivity {
 
         isLoading = true;
         progressBar.setVisibility(View.VISIBLE);
-        System.out.println("Loading page: " + page + ", current board URL: " + currentBoard.getUrl());
-        System.out.println("Current threads count: " + allThreads.size());
         executor.execute(() -> {
             try {
                 KomicaService.FetchThreadsTask task = new KomicaService.FetchThreadsTask(currentBoard.getUrl(), page);
                 List<Thread> newThreads = task.call();
 
-                System.out.println("Received " + (newThreads != null ? newThreads.size() : 0) + " threads from page " + page);
-
                 runOnUiThread(() -> {
                     if (newThreads == null || newThreads.isEmpty()) {
                         hasMore = false;
-                        System.out.println("Page " + page + " has no more threads, stopping pagination");
                         progressBar.setVisibility(View.GONE);
                         isLoading = false;
                     } else {
@@ -217,33 +248,29 @@ public class ThreadListActivity extends AppCompatActivity {
                             if (!existingThreadUrls.contains(thread.getUrl())) {
                                 existingThreadUrls.add(thread.getUrl());
                                 uniqueThreads.add(thread);
-                                System.out.println("Added unique thread: " + thread.getTitle());
-                            } else {
-                                System.out.println("Skipped duplicate thread: " + thread.getTitle());
                             }
                         }
 
-                        System.out.println("Unique threads from page " + page + ": " + uniqueThreads.size());
-
                         if (uniqueThreads.isEmpty()) {
-                            System.out.println("Page " + page + " contains only duplicate threads, trying next page");
                             currentPage = page;
                             progressBar.setVisibility(View.GONE);
                             isLoading = false;
-                            recyclerView.postDelayed(() -> loadMoreThreads(), 500);
+                            // Only retry loading next page if we haven't failed too many times consecutively
+                            // For simplicity, just stop or try one more time
+                            if (page < 10) { // Limit recursion
+                                recyclerView.postDelayed(() -> loadMoreThreads(), 500);
+                            }
                         } else {
                             currentPage = page;
                             allThreads.addAll(uniqueThreads);
                             sortThreadsByLatest();
                             filterThreads();
-                            System.out.println("Total threads after adding page " + page + ": " + allThreads.size());
                             progressBar.setVisibility(View.GONE);
                             isLoading = false;
                         }
                     }
                 });
             } catch (Exception e) {
-                System.out.println("Error loading page " + page + ": " + e.getMessage());
                 e.printStackTrace();
                 runOnUiThread(() -> {
                     progressBar.setVisibility(View.GONE);

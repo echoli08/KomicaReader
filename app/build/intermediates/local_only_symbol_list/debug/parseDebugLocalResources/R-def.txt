@@ -3,6 +3,7 @@ local
 drawable ic_expand_less
 drawable ic_expand_more
 drawable ic_launcher
+drawable ic_share
 drawable ic_star
 drawable ic_star_border
 id boardName
@@ -13,6 +14,7 @@ id contentPreview
 id expandIcon
 id favoriteButton
 id favoriteIcon
+id filterButton
 id imageCounter
 id imagePreview
 id lastReplyTime

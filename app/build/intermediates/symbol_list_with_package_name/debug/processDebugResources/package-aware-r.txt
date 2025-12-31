@@ -2994,6 +2994,7 @@ drawable ic_mtrl_chip_checked_black
 drawable ic_mtrl_chip_checked_circle
 drawable ic_mtrl_chip_close_circle
 drawable ic_search_black_24
+drawable ic_share
 drawable ic_star
 drawable ic_star_border
 drawable m3_avd_hide_password
@@ -3264,6 +3265,7 @@ id fill
 id fill_horizontal
 id fill_vertical
 id filled
+id filterButton
 id fitCenter
 id fitEnd
 id fitStart

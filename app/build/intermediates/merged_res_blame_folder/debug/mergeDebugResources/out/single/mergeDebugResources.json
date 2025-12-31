@@ -20,6 +20,10 @@
         "source": "C:\\Users\\06769\\.gradle\\daemon\\8.13\\com.komica.reader.app-main-35:\\layout\\item_post.xml"
     },
     {
+        "merged": "com.komica.reader.app-debug-33:/layout_item_thread.xml.flat",
+        "source": "com.komica.reader.app-main-35:/layout/item_thread.xml"
+    },
+    {
         "merged": "C:\\Users\\06769\\.gradle\\daemon\\8.13\\com.komica.reader.app-debug-33:\\layout_activity_thread_detail.xml.flat",
         "source": "C:\\Users\\06769\\.gradle\\daemon\\8.13\\com.komica.reader.app-main-35:\\layout\\activity_thread_detail.xml"
     },
@@ -32,6 +36,10 @@
         "source": "C:\\Users\\06769\\.gradle\\daemon\\8.13\\com.komica.reader.app-main-35:\\drawable\\ic_expand_less.xml"
     },
     {
+        "merged": "com.komica.reader.app-debug-33:/drawable_ic_share.xml.flat",
+        "source": "com.komica.reader.app-main-35:/drawable/ic_share.xml"
+    },
+    {
         "merged": "C:\\Users\\06769\\.gradle\\daemon\\8.13\\com.komica.reader.app-debug-33:\\layout_activity_main.xml.flat",
         "source": "C:\\Users\\06769\\.gradle\\daemon\\8.13\\com.komica.reader.app-main-35:\\layout\\activity_main.xml"
     },
@@ -40,8 +48,8 @@
         "source": "C:\\Users\\06769\\.gradle\\daemon\\8.13\\com.komica.reader.app-main-35:\\layout\\activity_image_preview.xml"
     },
     {
-        "merged": "com.komica.reader.app-debug-33:/layout_item_post.xml.flat",
-        "source": "com.komica.reader.app-main-35:/layout/item_post.xml"
+        "merged": "com.komica.reader.app-debug-33:/layout_activity_thread_list.xml.flat",
+        "source": "com.komica.reader.app-main-35:/layout/activity_thread_list.xml"
     },
     {
         "merged": "C:\\Users\\06769\\.gradle\\daemon\\8.13\\com.komica.reader.app-debug-33:\\layout_item_thread.xml.flat",

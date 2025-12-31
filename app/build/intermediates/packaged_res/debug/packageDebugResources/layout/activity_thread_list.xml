@@ -16,10 +16,18 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="搜尋主題"
+            android:hint="篩選主題"
             android:inputType="text"
+            android:imeOptions="actionDone"
             android:padding="10dp"
             android:background="@android:drawable/edit_text" />
+
+        <Button
+            android:id="@+id/filterButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:text="篩選" />
 
         <Button
             android:id="@+id/sortButton"

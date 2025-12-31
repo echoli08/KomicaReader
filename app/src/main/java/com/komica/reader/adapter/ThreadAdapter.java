@@ -17,6 +17,7 @@ public class ThreadAdapter extends RecyclerView.Adapter<ThreadAdapter.ThreadView
 
     public interface OnThreadClickListener {
         void onThreadClick(Thread thread);
+        void onShareClick(Thread thread);
     }
 
     public ThreadAdapter(List<Thread> threads, OnThreadClickListener listener) {
@@ -50,6 +51,7 @@ public class ThreadAdapter extends RecyclerView.Adapter<ThreadAdapter.ThreadView
         private TextView contentPreview;
         private TextView lastReplyTime;
         private TextView replyCount;
+        private View shareButton;
 
         public ThreadViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -59,6 +61,7 @@ public class ThreadAdapter extends RecyclerView.Adapter<ThreadAdapter.ThreadView
             contentPreview = itemView.findViewById(R.id.contentPreview);
             lastReplyTime = itemView.findViewById(R.id.lastReplyTime);
             replyCount = itemView.findViewById(R.id.replyCount);
+            shareButton = itemView.findViewById(R.id.shareButton);
         }
 
         public void bind(Thread thread) {
@@ -84,6 +87,12 @@ public class ThreadAdapter extends RecyclerView.Adapter<ThreadAdapter.ThreadView
             itemView.setOnClickListener(v -> {
                 if (onThreadClickListener != null) {
                     onThreadClickListener.onThreadClick(thread);
+                }
+            });
+            
+            shareButton.setOnClickListener(v -> {
+                if (onThreadClickListener != null) {
+                    onThreadClickListener.onShareClick(thread);
                 }
             });
         }

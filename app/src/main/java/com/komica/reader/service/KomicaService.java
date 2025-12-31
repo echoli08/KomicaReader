@@ -1,5 +1,10 @@
 package com.komica.reader.service;
 
+import okhttp3.FormBody;
+import okhttp3.RequestBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -8,9 +13,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 import com.komica.reader.model.Board;
 import com.komica.reader.model.BoardCategory;
 import com.komica.reader.model.Thread;
@@ -113,6 +115,43 @@ public class KomicaService {
         }
     }
 
+    public static class BoardSearchTask implements Callable<List<Thread>> {
+        private String boardUrl;
+        private String query;
+
+        public BoardSearchTask(String boardUrl, String query) {
+            this.boardUrl = boardUrl;
+            this.query = query;
+        }
+
+        @Override
+        public List<Thread> call() throws Exception {
+            String scriptUrl = boardUrl;
+            // Normalize URL to point to pixmicat.php
+            if (scriptUrl.endsWith("/")) {
+                scriptUrl += "pixmicat.php";
+            } else if (scriptUrl.endsWith("index.htm") || scriptUrl.endsWith("index.html")) {
+                scriptUrl = scriptUrl.substring(0, scriptUrl.lastIndexOf("/")) + "/pixmicat.php";
+            } else if (!scriptUrl.contains(".php")) {
+                scriptUrl += "/pixmicat.php";
+            }
+
+            String searchUrl = scriptUrl + "?mode=search&keyword=" + java.net.URLEncoder.encode(query, "UTF-8");
+            
+            android.util.Log.d("Komica", "Board Search URL: " + searchUrl);
+
+            Request request = new Request.Builder()
+                    .url(searchUrl)
+                    .build();
+
+            Response response = client.newCall(request).execute();
+            String html = response.body().string();
+
+            // Use dedicated parser for search results
+            return parseSearchResults(html, boardUrl);
+        }
+    }
+
     public static class SearchTask implements Callable<List<Thread>> {
         private String query;
 
@@ -188,44 +227,133 @@ public class KomicaService {
         List<Thread> threads = new ArrayList<>();
         Document doc = Jsoup.parse(html);
 
-        Elements threadElements = doc.select("#threads div.thread");
-        for (Element threadElement : threadElements) {
-            Element threadPost = threadElement.selectFirst("div.post");
+        // Try standard thread structure first
+        Elements elements = doc.select("div.thread");
+        boolean isThreadStructure = true;
+        
+        if (elements.isEmpty()) {
+            // Fallback to finding individual posts (sometimes search results are just a list of posts)
+            elements = doc.select("div.post");
+            isThreadStructure = false;
+        }
+
+        android.util.Log.d("Komica", "Search parsing: found " + elements.size() + " elements (Thread structure: " + isThreadStructure + ")");
+
+        for (Element element : elements) {
+            Element postElement;
+            if (isThreadStructure) {
+                postElement = element.selectFirst("div.post");
+            } else {
+                postElement = element;
+            }
+
+            if (postElement == null) continue;
 
             String title = DEFAULT_TITLE;
             String author = DEFAULT_AUTHOR;
             String threadUrl = "";
             String imageUrl = "";
-            int replyCount = 0;
+            int postNumber = 0;
+            String contentPreview = "";
+            String lastReplyTime = "";
 
-            if (threadPost != null) {
-                title = threadPost.selectFirst("span.title") != null ?
-                        threadPost.selectFirst("span.title").text().trim() : DEFAULT_TITLE;
-
-                author = threadPost.selectFirst("span.name") != null ?
-                        threadPost.selectFirst("span.name").text().trim() : DEFAULT_AUTHOR;
-
-                String replyLink = threadPost.selectFirst("span.rlink a") != null ?
-                        threadPost.selectFirst("span.rlink a").attr("href") : "";
-
-                Element imgElement = threadPost.selectFirst("img.img");
-                if (imgElement != null) {
-                    imageUrl = imgElement.attr("src");
-                }
-
-                threadUrl = replyLink;
+            // Parse Title
+            Element titleElement = postElement.selectFirst("span.title");
+            if (titleElement != null) {
+                title = titleElement.text().trim();
             }
 
-            if (!title.isEmpty()) {
+            // Parse Author
+            Element nameElement = postElement.selectFirst("span.name");
+            if (nameElement != null) {
+                author = nameElement.text().trim();
+            }
+
+            // Parse Link & Post Number
+            // Try span.qlink first (standard)
+            Element qlinkElement = postElement.selectFirst("span.qlink");
+            if (qlinkElement != null) {
+                String dataNo = qlinkElement.attr("data-no");
+                if (!dataNo.isEmpty()) {
+                    try {
+                        postNumber = Integer.parseInt(dataNo);
+                    } catch (NumberFormatException e) {
+                        postNumber = 0;
+                    }
+                    threadUrl = "pixmicat.php?res=" + dataNo;
+                }
+            }
+            
+            // Fallback: Try "Reply" link if qlink failed
+            if (threadUrl.isEmpty()) {
+                Element replyLink = postElement.selectFirst("span.rlink a"); // "回覆"
+                if (replyLink == null) {
+                    // Sometimes it's "No.xxx" link
+                    Elements links = postElement.select("a");
+                    for (Element link : links) {
+                        if (link.text().startsWith("No.")) {
+                            replyLink = link;
+                            break;
+                        }
+                    }
+                }
+                
+                if (replyLink != null) {
+                    threadUrl = replyLink.attr("href");
+                    if (postNumber == 0) {
+                        String txt = replyLink.text().replace("No.", "").trim();
+                        try { postNumber = Integer.parseInt(txt); } catch (Exception e) {}
+                    }
+                }
+            }
+
+            // Parse Image
+            Element thumbElement = postElement.selectFirst("a.file-thumb img.img");
+            if (thumbElement != null) {
+                imageUrl = thumbElement.attr("src");
+            }
+
+            // Parse Content (Quote)
+            Element quoteElement = postElement.selectFirst("div.quote");
+            if (quoteElement != null) {
+                String content = parseQuoteContent(quoteElement);
+                if (content.length() > 100) {
+                    contentPreview = content.substring(0, 100) + "...";
+                } else {
+                    contentPreview = content;
+                }
+            }
+            
+            // Parse Time
+            Element nowElement = postElement.selectFirst("span.now");
+            if (nowElement != null) {
+                lastReplyTime = nowElement.text().trim();
+            }
+
+            if (!threadUrl.isEmpty()) {
+                // Determine if title is missing, use content preview
+                if (title.equals(DEFAULT_TITLE) && !contentPreview.isEmpty()) {
+                    // Use first line of content as title if title is missing
+                    String[] lines = contentPreview.split("\n");
+                    if (lines.length > 0) {
+                        title = lines[0];
+                        if (title.length() > 30) title = title.substring(0, 30) + "...";
+                    }
+                }
+
                 String resolvedThreadUrl = resolveUrl(boardUrl, threadUrl);
+                
                 Thread thread = new Thread(
-                        String.valueOf(System.currentTimeMillis()),
+                        String.valueOf(System.currentTimeMillis()) + "-" + postNumber,
                         title,
                         author,
-                        replyCount,
+                        0, // Reply count usually unknown in search results
                         resolvedThreadUrl
                 );
+                thread.setPostNumber(postNumber);
                 thread.setImageUrl(resolveUrl(boardUrl, imageUrl));
+                thread.setContentPreview(contentPreview);
+                thread.setLastReplyTime(lastReplyTime);
 
                 threads.add(thread);
             }
