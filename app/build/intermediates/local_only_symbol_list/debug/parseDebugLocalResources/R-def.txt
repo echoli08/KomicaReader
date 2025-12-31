@@ -23,6 +23,9 @@ id postContent
 id postImage
 id postNumber
 id postTime
+id previewCard
+id previewContent
+id previewTitle
 id progressBar
 id recyclerView
 id replyCount

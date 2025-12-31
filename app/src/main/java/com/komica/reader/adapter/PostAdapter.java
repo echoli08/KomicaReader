@@ -1,11 +1,14 @@
 package com.komica.reader.adapter;
 
+import android.os.Handler;
+import android.os.Looper;
+import android.text.Layout;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.TextPaint;
-import android.text.method.LinkMovementMethod;
 import android.text.style.ClickableSpan;
 import android.text.style.ForegroundColorSpan;
+import android.view.MotionEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -30,15 +33,18 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
     private Map<Integer, Integer> postToImageIndexMap;
     private Map<String, Integer> postIdToPositionMap;
     private RecyclerView recyclerView;
-    private OnImageClickListener onImageClickListener;
+    private OnQuoteInteractionListener interactionListener;
 
-    public interface OnImageClickListener {
+    public interface OnQuoteInteractionListener {
         void onImageClick(int imageIndex, List<String> imageUrls);
+        void onQuoteClick(int position);
+        void onQuoteLongClick(Post post);
+        void onQuoteReleased();
     }
 
-    public PostAdapter(List<Post> posts, OnImageClickListener listener) {
+    public PostAdapter(List<Post> posts, OnQuoteInteractionListener listener) {
         this.posts = posts;
-        this.onImageClickListener = listener;
+        this.interactionListener = listener;
         this.allImageUrls = new ArrayList<>();
         this.postToImageIndexMap = new HashMap<>();
         this.postIdToPositionMap = new HashMap<>();
@@ -78,9 +84,9 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         return posts.size();
     }
 
-    private SpannableString createClickableLinks(String content) {
+    private SpannableString createSpannableContent(String content) {
         SpannableString spannable = new SpannableString(content);
-        Pattern pattern = Pattern.compile(">>(\\d+)");
+        Pattern pattern = Pattern.compile(">(\\d+)");
         Matcher matcher = pattern.matcher(content);
 
         while (matcher.find()) {
@@ -90,18 +96,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             if (targetPosition != null) {
                 ClickableSpan clickableSpan = new ClickableSpan() {
                     @Override
-                    public void onClick(@NonNull View widget) {
-                        if (recyclerView != null) {
-                            recyclerView.smoothScrollToPosition(targetPosition);
-                            PostViewHolder holder = (PostViewHolder) recyclerView.findViewHolderForAdapterPosition(targetPosition);
-                            if (holder != null) {
-                                holder.itemView.setBackgroundColor(0xFFFFE0B2);
-                                holder.itemView.postDelayed(() -> {
-                                    holder.itemView.setBackgroundColor(0x00000000);
-                                }, 1000);
-                            }
-                        }
-                    }
+                    public void onClick(@NonNull View widget) { }
 
                     @Override
                     public void updateDrawState(@NonNull TextPaint ds) {
@@ -113,8 +108,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                 
                 spannable.setSpan(clickableSpan, matcher.start(), matcher.end(), 
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                spannable.setSpan(new ForegroundColorSpan(0xFF2196F3), 
-                    matcher.start(), matcher.end(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
         }
         
@@ -127,6 +120,9 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         private TextView postContent;
         private TextView postTime;
         private ImageView postImage;
+        private Handler handler = new Handler(Looper.getMainLooper());
+        private Runnable longPressRunnable;
+        private boolean isLongPressed = false;
 
         public PostViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -149,9 +145,12 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                 postContent.setText("(無內容)");
                 postContent.setVisibility(View.GONE);
             } else {
-                postContent.setText(createClickableLinks(content));
-                postContent.setMovementMethod(LinkMovementMethod.getInstance());
+                SpannableString spannable = createSpannableContent(content);
+                postContent.setText(spannable);
+                postContent.setMovementMethod(null);
                 postContent.setVisibility(View.VISIBLE);
+                
+                setupTouchListener(spannable);
             }
 
             if (post.getThumbnailUrl() != null && !post.getThumbnailUrl().isEmpty()) {
@@ -166,14 +165,111 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                 if (imageIndex != null) {
                     final int index = imageIndex;
                     postImage.setOnClickListener(v -> {
-                        if (onImageClickListener != null) {
-                            onImageClickListener.onImageClick(index, allImageUrls);
+                        if (interactionListener != null) {
+                            interactionListener.onImageClick(index, allImageUrls);
                         }
                     });
                 }
             } else {
                 postImage.setVisibility(View.GONE);
             }
+        }
+
+        private void setupTouchListener(SpannableString spannable) {
+            postContent.setOnTouchListener((v, event) -> {
+                int action = event.getAction();
+                TextView widget = (TextView) v;
+
+                if (action == MotionEvent.ACTION_DOWN) {
+                    int x = (int) event.getX();
+                    int y = (int) event.getY();
+
+                    x -= widget.getTotalPaddingLeft();
+                    y -= widget.getTotalPaddingTop();
+
+                    x += widget.getScrollX();
+                    y += widget.getScrollY();
+
+                    Layout layout = widget.getLayout();
+                    int line = layout.getLineForVertical(y);
+                    int off = layout.getOffsetForHorizontal(line, x);
+
+                    ClickableSpan[] link = spannable.getSpans(off, off, ClickableSpan.class);
+
+                    if (link.length != 0) {
+                        int start = spannable.getSpanStart(link[0]);
+                        int end = spannable.getSpanEnd(link[0]);
+                        String linkText = spannable.subSequence(start, end).toString();
+                        
+                        Matcher matcher = Pattern.compile(">(\\d+)").matcher(linkText);
+                        if (matcher.find()) {
+                            String postId = matcher.group(1);
+                            Integer targetPos = postIdToPositionMap.get(postId);
+                            
+                            if (targetPos != null) {
+                                isLongPressed = false;
+                                longPressRunnable = () -> {
+                                    isLongPressed = true;
+                                    v.getParent().requestDisallowInterceptTouchEvent(true);
+                                    if (interactionListener != null) {
+                                        interactionListener.onQuoteLongClick(posts.get(targetPos));
+                                    }
+                                };
+                                handler.postDelayed(longPressRunnable, 500);
+                                return true;
+                            }
+                        }
+                    }
+                } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                    handler.removeCallbacks(longPressRunnable);
+                    v.getParent().requestDisallowInterceptTouchEvent(false);
+                    
+                    if (isLongPressed) {
+                        isLongPressed = false;
+                        if (interactionListener != null) {
+                            interactionListener.onQuoteReleased();
+                        }
+                        return true;
+                    } else if (action == MotionEvent.ACTION_UP) {
+                        int x = (int) event.getX();
+                        int y = (int) event.getY();
+                        x -= widget.getTotalPaddingLeft();
+                        y -= widget.getTotalPaddingTop();
+                        x += widget.getScrollX();
+                        y += widget.getScrollY();
+                        Layout layout = widget.getLayout();
+                        int line = layout.getLineForVertical(y);
+                        int off = layout.getOffsetForHorizontal(line, x);
+                        ClickableSpan[] link = spannable.getSpans(off, off, ClickableSpan.class);
+                        
+                        if (link.length != 0) {
+                             int start = spannable.getSpanStart(link[0]);
+                             int end = spannable.getSpanEnd(link[0]);
+                             String linkText = spannable.subSequence(start, end).toString();
+                             Matcher matcher = Pattern.compile(">(\\d+)").matcher(linkText);
+                             if (matcher.find()) {
+                                 String postId = matcher.group(1);
+                                 Integer targetPos = postIdToPositionMap.get(postId);
+                                 if (targetPos != null && interactionListener != null) {
+                                     interactionListener.onQuoteClick(targetPos);
+                                     
+                                     if (recyclerView != null) {
+                                         RecyclerView.ViewHolder targetHolder = recyclerView.findViewHolderForAdapterPosition(targetPos);
+                                         if (targetHolder != null) {
+                                             targetHolder.itemView.setBackgroundColor(0xFFFFE0B2);
+                                             targetHolder.itemView.postDelayed(() -> {
+                                                 targetHolder.itemView.setBackgroundColor(0x00000000);
+                                             }, 1000);
+                                         }
+                                     }
+                                 }
+                             }
+                             return true;
+                        }
+                    }
+                }
+                return false;
+            });
         }
     }
 }

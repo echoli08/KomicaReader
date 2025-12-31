@@ -1,7 +1,6 @@
 package com.komica.reader;
 
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -26,6 +25,11 @@ public class ThreadDetailActivity extends AppCompatActivity {
     private ProgressBar progressBar;
     private Button scrollToBottomButton;
     private Button shareButton;
+    
+    private View previewCard;
+    private TextView previewTitle;
+    private TextView previewContent;
+    
     private PostAdapter adapter;
     private ExecutorService executor = Executors.newSingleThreadExecutor();
     private Thread currentThread;
@@ -43,6 +47,10 @@ public class ThreadDetailActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
         scrollToBottomButton = findViewById(R.id.scrollToBottomButton);
         shareButton = findViewById(R.id.shareButton);
+        
+        previewCard = findViewById(R.id.previewCard);
+        previewTitle = findViewById(R.id.previewTitle);
+        previewContent = findViewById(R.id.previewContent);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
@@ -85,9 +93,6 @@ public class ThreadDetailActivity extends AppCompatActivity {
     }
 
     private void loadThreadDetail(Thread thread) {
-        System.out.println("=== Loading thread detail ===");
-        System.out.println("Thread URL: " + thread.getUrl());
-        System.out.println("Thread title: " + thread.getTitle());
         progressBar.setVisibility(View.VISIBLE);
         executor.execute(() -> {
             try {
@@ -96,25 +101,40 @@ public class ThreadDetailActivity extends AppCompatActivity {
 
                 runOnUiThread(() -> {
                     List<Post> posts = result.getPosts();
-                    System.out.println("Posts loaded in activity: " + posts.size());
-                    System.out.println("Result thread title: " + result.getTitle());
                     
-                    if (posts != null && !posts.isEmpty()) {
-                        System.out.println("First post: " + posts.get(0).getAuthor() + " - " + posts.get(0).getContent());
-                    }
-                    
-                    adapter = new PostAdapter(posts, (position, imageUrls) -> {
-                        Intent intent = new Intent(ThreadDetailActivity.this, ImagePreviewActivity.class);
-                        intent.putStringArrayListExtra("imageUrls", new ArrayList<>(imageUrls));
-                        intent.putExtra("position", position);
-                        startActivity(intent);
+                    adapter = new PostAdapter(posts, new PostAdapter.OnQuoteInteractionListener() {
+                        @Override
+                        public void onImageClick(int imageIndex, List<String> imageUrls) {
+                            Intent intent = new Intent(ThreadDetailActivity.this, ImagePreviewActivity.class);
+                            intent.putStringArrayListExtra("imageUrls", new ArrayList<>(imageUrls));
+                            intent.putExtra("position", imageIndex);
+                            startActivity(intent);
+                        }
+
+                        @Override
+                        public void onQuoteClick(int position) {
+                            recyclerView.smoothScrollToPosition(position);
+                        }
+
+                        @Override
+                        public void onQuoteLongClick(Post post) {
+                            if (post != null) {
+                                previewTitle.setText("No. " + post.getNumber() + " " + (post.getAuthor() != null ? post.getAuthor() : ""));
+                                previewContent.setText(post.getContent());
+                                previewCard.setVisibility(View.VISIBLE);
+                            }
+                        }
+
+                        @Override
+                        public void onQuoteReleased() {
+                            previewCard.setVisibility(View.GONE);
+                        }
                     });
+                    
                     recyclerView.setAdapter(adapter);
                     progressBar.setVisibility(View.GONE);
-                    System.out.println("=== Thread detail loading completed successfully ===");
                 });
             } catch (Exception e) {
-                System.out.println("Error loading thread detail: " + e.getMessage());
                 e.printStackTrace();
                 runOnUiThread(() -> {
                     progressBar.setVisibility(View.GONE);

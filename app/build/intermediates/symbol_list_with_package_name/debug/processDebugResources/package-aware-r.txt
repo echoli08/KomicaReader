@@ -3442,6 +3442,9 @@ id postLayout
 id postNumber
 id postTime
 id pressed
+id previewCard
+id previewContent
+id previewTitle
 id progressBar
 id progress_circular
 id progress_horizontal
