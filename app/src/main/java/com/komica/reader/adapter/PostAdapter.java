@@ -102,7 +102,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             currentPos += line.length() + 1; // +1 for the newline
         }
 
-        // 2. Handle Quotes (>>No. or >No.)
+        // 2. Handle Quotes (>>No. or >No.) - High Priority
         Pattern pattern = Pattern.compile(">>?(\\d+)");
         Matcher matcher = pattern.matcher(content);
 
@@ -128,12 +128,19 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             }
         }
 
-        // 3. Handle Web URLs
+        // 3. Handle Web URLs - Do not overlap with existing spans
         Matcher urlMatcher = android.util.Patterns.WEB_URL.matcher(content);
         while (urlMatcher.find()) {
+            int start = urlMatcher.start();
+            int end = urlMatcher.end();
+            
+            // Check if this area is already covered by a Quote span
+            ClickableSpan[] existingSpans = spannable.getSpans(start, end, ClickableSpan.class);
+            if (existingSpans.length > 0) continue;
+
             String url = urlMatcher.group();
             if (!url.startsWith("http")) {
-                url = "https://" + url; // Ensure it has a scheme
+                url = "https://" + url;
             }
             final String finalUrl = url;
             
@@ -142,9 +149,10 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                 public void onClick(@NonNull View widget) {
                     try {
                         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(finalUrl));
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         widget.getContext().startActivity(intent);
                     } catch (Exception e) {
-                        // Log or show error
+                        android.widget.Toast.makeText(widget.getContext(), "無法開啟網址: " + finalUrl, android.widget.Toast.LENGTH_SHORT).show();
                     }
                 }
 
@@ -155,8 +163,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                     ds.setUnderlineText(true);
                 }
             };
-            spannable.setSpan(urlSpan, urlMatcher.start(), urlMatcher.end(), 
-                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            spannable.setSpan(urlSpan, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
         
         return spannable;
@@ -223,18 +230,20 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             }
         }
 
+        private ClickableSpan pressedSpan = null;
+
         private void setupTouchListener(SpannableString spannable) {
             postContent.setOnTouchListener((v, event) -> {
                 int action = event.getAction();
                 TextView widget = (TextView) v;
 
                 if (action == MotionEvent.ACTION_DOWN) {
+                    pressedSpan = null;
                     int x = (int) event.getX();
                     int y = (int) event.getY();
 
                     x -= widget.getTotalPaddingLeft();
                     y -= widget.getTotalPaddingTop();
-
                     x += widget.getScrollX();
                     y += widget.getScrollY();
 
@@ -242,11 +251,24 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                     int line = layout.getLineForVertical(y);
                     int off = layout.getOffsetForHorizontal(line, x);
 
-                    ClickableSpan[] link = spannable.getSpans(off, off, ClickableSpan.class);
+                    ClickableSpan[] links = spannable.getSpans(off, off, ClickableSpan.class);
 
-                    if (link.length != 0) {
-                        int start = spannable.getSpanStart(link[0]);
-                        int end = spannable.getSpanEnd(link[0]);
+                    if (links.length != 0) {
+                        // Priority: Find a quote link first, otherwise take the first found
+                        ClickableSpan target = links[0];
+                        for (ClickableSpan link : links) {
+                            int start = spannable.getSpanStart(link);
+                            int end = spannable.getSpanEnd(link);
+                            String text = spannable.subSequence(start, end).toString();
+                            if (text.matches(">>?\\d+")) {
+                                target = link;
+                                break;
+                            }
+                        }
+                        
+                        pressedSpan = target;
+                        int start = spannable.getSpanStart(pressedSpan);
+                        int end = spannable.getSpanEnd(pressedSpan);
                         String linkText = spannable.subSequence(start, end).toString();
                         
                         Matcher matcher = Pattern.compile(">>?(\\d+)").matcher(linkText);
@@ -266,6 +288,9 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                                 handler.postDelayed(longPressRunnable, 500);
                                 return true;
                             }
+                        } else {
+                            // URL ClickableSpan found
+                            return true;
                         }
                     }
                 } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
@@ -277,48 +302,38 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                         if (interactionListener != null) {
                             interactionListener.onQuoteReleased();
                         }
+                        pressedSpan = null;
                         return true;
-                    } else if (action == MotionEvent.ACTION_UP) {
-                        int x = (int) event.getX();
-                        int y = (int) event.getY();
-                        x -= widget.getTotalPaddingLeft();
-                        y -= widget.getTotalPaddingTop();
-                        x += widget.getScrollX();
-                        y += widget.getScrollY();
-                        Layout layout = widget.getLayout();
-                        int line = layout.getLineForVertical(y);
-                        int off = layout.getOffsetForHorizontal(line, x);
-                        ClickableSpan[] link = spannable.getSpans(off, off, ClickableSpan.class);
+                    } else if (action == MotionEvent.ACTION_UP && pressedSpan != null) {
+                        int start = spannable.getSpanStart(pressedSpan);
+                        int end = spannable.getSpanEnd(pressedSpan);
+                        String linkText = spannable.subSequence(start, end).toString();
+                        Matcher matcher = Pattern.compile(">>?(\\d+)").matcher(linkText);
                         
-                        if (link.length != 0) {
-                             int start = spannable.getSpanStart(link[0]);
-                             int end = spannable.getSpanEnd(link[0]);
-                             String linkText = spannable.subSequence(start, end).toString();
-                             Matcher matcher = Pattern.compile(">>?(\\d+)").matcher(linkText);
-                             
-                             if (matcher.find()) {
-                                 String postId = matcher.group(1);
-                                 Integer targetPos = postIdToPositionMap.get(postId);
-                                 if (targetPos != null && interactionListener != null) {
-                                     interactionListener.onQuoteClick(targetPos);
-                                     
-                                     if (recyclerView != null) {
-                                         RecyclerView.ViewHolder targetHolder = recyclerView.findViewHolderForAdapterPosition(targetPos);
-                                         if (targetHolder != null) {
-                                             targetHolder.itemView.setBackgroundColor(0xFFFFE0B2);
-                                             targetHolder.itemView.postDelayed(() -> {
-                                                 targetHolder.itemView.setBackgroundColor(0x00000000);
-                                             }, 1000);
-                                         }
-                                     }
-                                 }
-                             } else {
-                                 // Not a quote, trigger original onClick (for URLs)
-                                 link[0].onClick(widget);
-                             }
-                             return true;
+                        if (matcher.find()) {
+                            String postId = matcher.group(1);
+                            Integer targetPos = postIdToPositionMap.get(postId);
+                            if (targetPos != null && interactionListener != null) {
+                                interactionListener.onQuoteClick(targetPos);
+                                
+                                if (recyclerView != null) {
+                                    RecyclerView.ViewHolder targetHolder = recyclerView.findViewHolderForAdapterPosition(targetPos);
+                                    if (targetHolder != null) {
+                                        targetHolder.itemView.setBackgroundColor(0xFFFFE0B2);
+                                        targetHolder.itemView.postDelayed(() -> {
+                                            targetHolder.itemView.setBackgroundColor(0x00000000);
+                                        }, 1000);
+                                    }
+                                }
+                            }
+                        } else {
+                            // Trigger the original onClick for URLs
+                            pressedSpan.onClick(widget);
                         }
+                        pressedSpan = null;
+                        return true;
                     }
+                    pressedSpan = null;
                 }
                 return false;
             });
