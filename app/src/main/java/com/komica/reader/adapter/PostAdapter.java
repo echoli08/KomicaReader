@@ -104,27 +104,29 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         }
 
         // 2. Handle Quotes (>>No. or >No.) - High Priority
-        // Use a more inclusive regex
         Pattern pattern = Pattern.compile(">>?(\\d+)");
         Matcher matcher = pattern.matcher(content);
 
         while (matcher.find()) {
             final String postId = matcher.group(1);
+            final Integer targetPosition = postIdToPositionMap.get(postId);
             
-            ClickableSpan clickableSpan = new ClickableSpan() {
-                @Override
-                public void onClick(@NonNull View widget) { }
+            if (targetPosition != null) {
+                ClickableSpan clickableSpan = new ClickableSpan() {
+                    @Override
+                    public void onClick(@NonNull View widget) { }
 
-                @Override
-                public void updateDrawState(@NonNull TextPaint ds) {
-                    super.updateDrawState(ds);
-                    ds.setColor(0xFF2196F3);
-                    ds.setUnderlineText(true);
-                }
-            };
-            
-            spannable.setSpan(clickableSpan, matcher.start(), matcher.end(), 
-                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    @Override
+                    public void updateDrawState(@NonNull TextPaint ds) {
+                        super.updateDrawState(ds);
+                        ds.setColor(0xFF2196F3);
+                        ds.setUnderlineText(true);
+                    }
+                };
+                
+                spannable.setSpan(clickableSpan, matcher.start(), matcher.end(), 
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
         }
 
         // 3. Handle Web URLs - Do not overlap with existing spans
@@ -286,15 +288,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                                 };
                                 handler.postDelayed(longPressRunnable, 500);
                                 return true;
-                            } else {
-                                // Post not found in current list
-                                isLongPressed = false;
-                                longPressRunnable = () -> {
-                                    isLongPressed = true;
-                                    android.widget.Toast.makeText(widget.getContext(), "找不到回應 No." + postId, android.widget.Toast.LENGTH_SHORT).show();
-                                };
-                                handler.postDelayed(longPressRunnable, 500);
-                                return true;
                             }
                         } else {
                             // URL ClickableSpan found
@@ -316,10 +309,10 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                         int start = spannable.getSpanStart(pressedSpan);
                         int end = spannable.getSpanEnd(pressedSpan);
                         String linkText = spannable.subSequence(start, end).toString();
-                        Matcher matcher = Pattern.compile(">>?(\\d+)").matcher(linkText);
+                        Matcher upMatcher = Pattern.compile(">>?(\\d+)").matcher(linkText);
                         
-                        if (matcher.find()) {
-                            String postId = matcher.group(1);
+                        if (upMatcher.find()) {
+                            String postId = upMatcher.group(1);
                             Integer targetPos = postIdToPositionMap.get(postId);
                             if (targetPos != null && interactionListener != null) {
                                 interactionListener.onQuoteClick(targetPos);
@@ -333,8 +326,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                                         }, 1000);
                                     }
                                 }
-                            } else {
-                                android.widget.Toast.makeText(widget.getContext(), "無法跳轉：回應 No." + postId + " 不在目前的列表中", android.widget.Toast.LENGTH_SHORT).show();
                             }
                         } else {
                             // Trigger the original onClick for URLs
