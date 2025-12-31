@@ -86,7 +86,22 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
 
     private SpannableString createSpannableContent(String content) {
         SpannableString spannable = new SpannableString(content);
-        Pattern pattern = Pattern.compile(">(\\d+)");
+        
+        // 1. Handle Green Text (lines starting with >)
+        String[] lines = content.split("\n");
+        int currentPos = 0;
+        for (String line : lines) {
+            if (line.startsWith(">") && !line.matches("^>>?\\d+.*")) {
+                int end = Math.min(currentPos + line.length(), spannable.length());
+                spannable.setSpan(new ForegroundColorSpan(0xFF789922), 
+                    currentPos, end, 
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+            currentPos += line.length() + 1; // +1 for the newline
+        }
+
+        // 2. Handle Quotes (>>No. or >No.)
+        Pattern pattern = Pattern.compile(">>?(\\d+)");
         Matcher matcher = pattern.matcher(content);
 
         while (matcher.find()) {
@@ -201,7 +216,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                         int end = spannable.getSpanEnd(link[0]);
                         String linkText = spannable.subSequence(start, end).toString();
                         
-                        Matcher matcher = Pattern.compile(">(\\d+)").matcher(linkText);
+                        Matcher matcher = Pattern.compile(">>?(\\d+)").matcher(linkText);
                         if (matcher.find()) {
                             String postId = matcher.group(1);
                             Integer targetPos = postIdToPositionMap.get(postId);
@@ -246,7 +261,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                              int start = spannable.getSpanStart(link[0]);
                              int end = spannable.getSpanEnd(link[0]);
                              String linkText = spannable.subSequence(start, end).toString();
-                             Matcher matcher = Pattern.compile(">(\\d+)").matcher(linkText);
+                             Matcher matcher = Pattern.compile(">>?(\\d+)").matcher(linkText);
                              if (matcher.find()) {
                                  String postId = matcher.group(1);
                                  Integer targetPos = postIdToPositionMap.get(postId);
