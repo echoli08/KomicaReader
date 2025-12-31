@@ -1,5 +1,7 @@
 package com.komica.reader.adapter;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Layout;
@@ -124,6 +126,37 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                 spannable.setSpan(clickableSpan, matcher.start(), matcher.end(), 
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
+        }
+
+        // 3. Handle Web URLs
+        Matcher urlMatcher = android.util.Patterns.WEB_URL.matcher(content);
+        while (urlMatcher.find()) {
+            String url = urlMatcher.group();
+            if (!url.startsWith("http")) {
+                url = "https://" + url; // Ensure it has a scheme
+            }
+            final String finalUrl = url;
+            
+            ClickableSpan urlSpan = new ClickableSpan() {
+                @Override
+                public void onClick(@NonNull View widget) {
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(finalUrl));
+                        widget.getContext().startActivity(intent);
+                    } catch (Exception e) {
+                        // Log or show error
+                    }
+                }
+
+                @Override
+                public void updateDrawState(@NonNull TextPaint ds) {
+                    super.updateDrawState(ds);
+                    ds.setColor(0xFF2196F3);
+                    ds.setUnderlineText(true);
+                }
+            };
+            spannable.setSpan(urlSpan, urlMatcher.start(), urlMatcher.end(), 
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
         
         return spannable;
@@ -262,6 +295,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                              int end = spannable.getSpanEnd(link[0]);
                              String linkText = spannable.subSequence(start, end).toString();
                              Matcher matcher = Pattern.compile(">>?(\\d+)").matcher(linkText);
+                             
                              if (matcher.find()) {
                                  String postId = matcher.group(1);
                                  Integer targetPos = postIdToPositionMap.get(postId);
@@ -278,6 +312,9 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                                          }
                                      }
                                  }
+                             } else {
+                                 // Not a quote, trigger original onClick (for URLs)
+                                 link[0].onClick(widget);
                              }
                              return true;
                         }
