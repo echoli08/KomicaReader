@@ -2,7 +2,9 @@ package com.komica.reader.model;
 
 import java.util.List;
 
-public class BoardCategory {
+import java.io.Serializable;
+
+public class BoardCategory implements Serializable {
     private String name;
     private List<Board> boards;
     private boolean expanded;

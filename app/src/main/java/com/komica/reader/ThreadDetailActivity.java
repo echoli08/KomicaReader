@@ -20,6 +20,11 @@ import java.util.concurrent.Executors;
 
 import androidx.appcompat.widget.Toolbar;
 
+import com.komica.reader.viewmodel.ThreadDetailViewModel;
+import com.komica.reader.viewmodel.ThreadDetailViewModelFactory;
+import androidx.lifecycle.ViewModelProvider;
+import java.util.concurrent.Executors;
+
 public class ThreadDetailActivity extends AppCompatActivity {
 
     private TextView threadTitle;
@@ -33,7 +38,7 @@ public class ThreadDetailActivity extends AppCompatActivity {
     private TextView previewContent;
     
     private PostAdapter adapter;
-    private ExecutorService executor = Executors.newSingleThreadExecutor();
+    private ThreadDetailViewModel viewModel;
     private Thread currentThread;
 
     @Override
@@ -41,8 +46,14 @@ public class ThreadDetailActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_thread_detail);
 
-        Thread thread = (Thread) getIntent().getSerializableExtra("thread");
-        currentThread = thread;
+        currentThread = (Thread) getIntent().getSerializableExtra("thread");
+        if (currentThread == null) {
+            finish();
+            return;
+        }
+
+        ThreadDetailViewModelFactory factory = new ThreadDetailViewModelFactory(getApplication(), currentThread);
+        viewModel = new ViewModelProvider(this, factory).get(ThreadDetailViewModel.class);
         
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -66,10 +77,66 @@ public class ThreadDetailActivity extends AppCompatActivity {
         scrollToBottomButton.setOnClickListener(v -> scrollToBottom());
         shareButton.setOnClickListener(v -> shareThread());
 
-        if (thread != null) {
-            threadTitle.setText(thread.getTitle());
-            loadThreadDetail(thread);
-        }
+        threadTitle.setText(currentThread.getTitle());
+        
+        observeViewModel();
+    }
+
+    private void observeViewModel() {
+        viewModel.getThreadDetail().observe(this, thread -> {
+            if (thread != null) {
+                updateUI(thread);
+            }
+        });
+
+        viewModel.getIsLoading().observe(this, isLoading -> {
+            progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+        });
+
+        viewModel.getErrorMessage().observe(this, error -> {
+            if (error != null) {
+                android.widget.Toast.makeText(this, error, android.widget.Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void updateUI(Thread thread) {
+        List<Post> posts = thread.getPosts();
+        adapter = new PostAdapter(posts, new PostAdapter.OnQuoteInteractionListener() {
+            @Override
+            public void onImageClick(int imageIndex, List<String> imageUrls) {
+                Intent intent = new Intent(ThreadDetailActivity.this, ImagePreviewActivity.class);
+                intent.putStringArrayListExtra("imageUrls", new ArrayList<>(imageUrls));
+                intent.putExtra("position", imageIndex);
+                startActivity(intent);
+            }
+
+            @Override
+            public void onImageLongClick(String imageUrl) {
+                shareImage(imageUrl);
+            }
+
+            @Override
+            public void onQuoteClick(int position) {
+                recyclerView.smoothScrollToPosition(position);
+            }
+
+            @Override
+            public void onQuoteLongClick(Post post) {
+                if (post != null) {
+                    previewTitle.setText("No. " + post.getNumber() + " " + (post.getAuthor() != null ? post.getAuthor() : ""));
+                    previewContent.setText(post.getContent());
+                    previewCard.setVisibility(View.VISIBLE);
+                }
+            }
+
+            @Override
+            public void onQuoteReleased() {
+                previewCard.setVisibility(View.GONE);
+            }
+        });
+        
+        recyclerView.setAdapter(adapter);
     }
 
     private void scrollToBottom() {
@@ -95,7 +162,7 @@ public class ThreadDetailActivity extends AppCompatActivity {
     }
 
     private void shareImage(String imageUrl) {
-        executor.execute(() -> {
+        com.komica.reader.repository.KomicaRepository.getInstance(this).execute(() -> {
             try {
                 java.io.File file = com.bumptech.glide.Glide.with(this)
                     .asFile()
@@ -126,65 +193,6 @@ public class ThreadDetailActivity extends AppCompatActivity {
         return "https://gaia.komica1.org/79/" + url;
     }
 
-    private void loadThreadDetail(Thread thread) {
-        progressBar.setVisibility(View.VISIBLE);
-        executor.execute(() -> {
-            try {
-                KomicaService.FetchThreadDetailTask task = new KomicaService.FetchThreadDetailTask(thread.getUrl());
-                Thread result = task.call();
-
-                runOnUiThread(() -> {
-                    List<Post> posts = result.getPosts();
-                    
-                    adapter = new PostAdapter(posts, new PostAdapter.OnQuoteInteractionListener() {
-                        @Override
-                        public void onImageClick(int imageIndex, List<String> imageUrls) {
-                            Intent intent = new Intent(ThreadDetailActivity.this, ImagePreviewActivity.class);
-                            intent.putStringArrayListExtra("imageUrls", new ArrayList<>(imageUrls));
-                            intent.putExtra("position", imageIndex);
-                            startActivity(intent);
-                        }
-
-                        @Override
-                        public void onImageLongClick(String imageUrl) {
-                            shareImage(imageUrl);
-                        }
-
-                        @Override
-                        public void onQuoteClick(int position) {
-                            recyclerView.smoothScrollToPosition(position);
-                        }
-
-                        @Override
-                        public void onQuoteLongClick(Post post) {
-                            if (post != null) {
-                                previewTitle.setText("No. " + post.getNumber() + " " + (post.getAuthor() != null ? post.getAuthor() : ""));
-                                previewContent.setText(post.getContent());
-                                previewCard.setVisibility(View.VISIBLE);
-                            }
-                        }
-
-                        @Override
-                        public void onQuoteReleased() {
-                            previewCard.setVisibility(View.GONE);
-                        }
-                    });
-                    
-                    recyclerView.setAdapter(adapter);
-                    progressBar.setVisibility(View.GONE);
-                });
-            } catch (Exception e) {
-                e.printStackTrace();
-                runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
-                    android.widget.Toast.makeText(ThreadDetailActivity.this, 
-                        "載入失敗: " + e.getMessage(), 
-                        android.widget.Toast.LENGTH_LONG).show();
-                });
-            }
-        });
-    }
-
     @Override
     public boolean onOptionsItemSelected(android.view.MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
@@ -192,11 +200,5 @@ public class ThreadDetailActivity extends AppCompatActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        executor.shutdown();
     }
 }

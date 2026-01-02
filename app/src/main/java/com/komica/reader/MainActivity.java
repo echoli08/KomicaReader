@@ -24,14 +24,19 @@ import android.content.SharedPreferences;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.Toolbar;
 
+import com.komica.reader.viewmodel.MainViewModel;
+import androidx.lifecycle.ViewModelProvider;
+
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+
 public class MainActivity extends AppCompatActivity {
 
     private RecyclerView recyclerView;
     private ProgressBar progressBar;
+    private SwipeRefreshLayout swipeRefreshLayout;
     private BoardCategoryAdapter categoryAdapter;
     private List<BoardCategory> categories = new ArrayList<>();
-    private List<BoardCategory> originalCategories = new ArrayList<>();
-    private ExecutorService executor = Executors.newSingleThreadExecutor();
+    private MainViewModel viewModel;
     private FavoritesManager favoritesManager;
     private SharedPreferences prefs;
 
@@ -55,11 +60,17 @@ public class MainActivity extends AppCompatActivity {
         }
         
         favoritesManager = FavoritesManager.getInstance(this);
+        viewModel = new ViewModelProvider(this).get(MainViewModel.class);
 
         recyclerView = findViewById(R.id.recyclerView);
         progressBar = findViewById(R.id.progressBar);
+        swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            viewModel.loadBoards(true);
+        });
 
         categoryAdapter = new BoardCategoryAdapter(categories, 
             board -> {
@@ -68,14 +79,45 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
             },
             board -> {
-                favoritesManager.toggleFavorite(board.getUrl());
-                updateCategoriesWithFavorites();
+                viewModel.toggleFavorite(board);
             }
         );
 
         recyclerView.setAdapter(categoryAdapter);
         
-        loadBoards();
+        observeViewModel();
+        
+        if (savedInstanceState == null) {
+            viewModel.loadBoards();
+        }
+    }
+
+    private void observeViewModel() {
+        viewModel.getCategories().observe(this, newCategories -> {
+            categories.clear();
+            categories.addAll(newCategories);
+            categoryAdapter.notifyDataSetChanged();
+            swipeRefreshLayout.setRefreshing(false);
+        });
+
+        viewModel.getIsLoading().observe(this, isLoading -> {
+            if (!swipeRefreshLayout.isRefreshing()) {
+                progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+            }
+        });
+
+        viewModel.getErrorMessage().observe(this, error -> {
+            if (error != null) {
+                Toast.makeText(this, error, Toast.LENGTH_LONG).show();
+                swipeRefreshLayout.setRefreshing(false);
+            }
+        });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        viewModel.refreshFavorites();
     }
 
     @Override
@@ -101,72 +143,5 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
-    }
-
-    private void loadBoards() {
-        progressBar.setVisibility(View.VISIBLE);
-        executor.execute(() -> {
-            try {
-                KomicaService.FetchBoardsTask task = new KomicaService.FetchBoardsTask();
-                List<BoardCategory> result = task.call();
-                
-                runOnUiThread(() -> {
-                    originalCategories.clear();
-                    originalCategories.addAll(result);
-                    updateCategoriesWithFavorites();
-                    progressBar.setVisibility(View.GONE);
-                });
-            } catch (Exception e) {
-                android.util.Log.e("Komica", "Error loading boards: " + e.getMessage());
-                e.printStackTrace();
-                runOnUiThread(() -> {
-                    progressBar.setVisibility(View.GONE);
-                    Toast.makeText(MainActivity.this, 
-                        "載入板塊失敗: " + e.getMessage(), 
-                        Toast.LENGTH_LONG).show();
-                });
-            }
-        });
-    }
-
-    private void updateCategoriesWithFavorites() {
-        categories.clear();
-        
-        List<Board> favoriteBoards = new ArrayList<>();
-        // Iterate through originalCategories to find favorite boards
-        // This ensures we have the Board objects with correct names and URLs
-        for (BoardCategory cat : originalCategories) {
-            for (Board board : cat.getBoards()) {
-                if (favoritesManager.isFavorite(board.getUrl())) {
-                    // Create a copy or add reference? Adding reference is fine for now
-                    // check if not already added (some boards might appear in multiple categories if API changes, but unlikely)
-                    boolean alreadyAdded = false;
-                    for (Board fb : favoriteBoards) {
-                        if (fb.getUrl().equals(board.getUrl())) {
-                            alreadyAdded = true;
-                            break;
-                        }
-                    }
-                    if (!alreadyAdded) {
-                        favoriteBoards.add(board);
-                    }
-                }
-            }
-        }
-        
-        if (!favoriteBoards.isEmpty()) {
-            BoardCategory favCategory = new BoardCategory("我的最愛", favoriteBoards);
-            favCategory.setExpanded(true); 
-            categories.add(favCategory);
-        }
-        
-        categories.addAll(originalCategories);
-        categoryAdapter.notifyDataSetChanged();
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        executor.shutdown();
     }
 }

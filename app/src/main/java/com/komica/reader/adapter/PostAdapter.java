@@ -191,6 +191,18 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             postContent = itemView.findViewById(R.id.postContent);
             postTime = itemView.findViewById(R.id.postTime);
             postImage = itemView.findViewById(R.id.postImage);
+
+            itemView.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+                @Override
+                public void onViewAttachedToWindow(@NonNull View v) {}
+
+                @Override
+                public void onViewDetachedFromWindow(@NonNull View v) {
+                    if (longPressRunnable != null) {
+                        handler.removeCallbacks(longPressRunnable);
+                    }
+                }
+            });
         }
 
         public void bind(Post post, int position) {

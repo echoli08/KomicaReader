@@ -1,6 +1,8 @@
 package com.komica.reader.model;
 
-public class Post {
+import java.io.Serializable;
+
+public class Post implements Serializable {
     private String id;
     private String author;
     private String content;

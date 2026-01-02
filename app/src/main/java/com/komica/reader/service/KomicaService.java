@@ -19,8 +19,8 @@ import com.komica.reader.model.Thread;
 import com.komica.reader.model.Post;
 
 public class KomicaService {
-    private static final String BASE_URL = "https://komica1.org";
-    private static final OkHttpClient client = new OkHttpClient.Builder()
+    private static final String BASE_URL = "http://komica1.org";
+    private static OkHttpClient client = new OkHttpClient.Builder()
             .followRedirects(true)
             .followSslRedirects(true)
             .addInterceptor(chain -> {
@@ -34,6 +34,10 @@ public class KomicaService {
                 return chain.proceed(request);
             })
             .build();
+
+    public static void setClient(OkHttpClient customClient) {
+        client = customClient;
+    }
     private static final String DEFAULT_TITLE = "Untitled";
     private static final String DEFAULT_AUTHOR = "Anonymous";
 
@@ -67,12 +71,19 @@ public class KomicaService {
         android.util.Log.d("Komica", "Original board URL: " + url);
 
         if (page > 0) {
-            if (url.contains("index.htm")) {
+            if (url.endsWith("index.htm")) {
                 url = url.replace("index.htm", page + ".htm");
+            } else if (url.endsWith("index.html")) {
+                url = url.replace("index.html", page + ".htm");
             } else if (url.endsWith("/")) {
                 url = url + page + ".htm";
             } else {
-                url = url + "/" + page + ".htm";
+                // If it's something like .../pixmicat.php, we need to be careful
+                if (url.contains(".php")) {
+                    url = url.substring(0, url.lastIndexOf("/")) + "/" + page + ".htm";
+                } else {
+                    url = url + "/" + page + ".htm";
+                }
             }
         }
 

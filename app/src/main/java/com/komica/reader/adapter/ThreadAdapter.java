@@ -8,6 +8,8 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.komica.reader.R;
 import com.komica.reader.model.Thread;
+import androidx.recyclerview.widget.DiffUtil;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ThreadAdapter extends RecyclerView.Adapter<ThreadAdapter.ThreadViewHolder> {
@@ -21,8 +23,42 @@ public class ThreadAdapter extends RecyclerView.Adapter<ThreadAdapter.ThreadView
     }
 
     public ThreadAdapter(List<Thread> threads, OnThreadClickListener listener) {
-        this.threads = threads;
+        this.threads = new ArrayList<>(threads);
         this.onThreadClickListener = listener;
+    }
+
+    public void updateThreads(List<Thread> newThreads) {
+        DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new DiffUtil.Callback() {
+            @Override
+            public int getOldListSize() {
+                return threads.size();
+            }
+
+            @Override
+            public int getNewListSize() {
+                return newThreads.size();
+            }
+
+            @Override
+            public boolean areItemsTheSame(int oldItemPosition, int newItemPosition) {
+                return threads.get(oldItemPosition).getUrl().equals(newThreads.get(newItemPosition).getUrl());
+            }
+
+            @Override
+            public boolean areContentsTheSame(int oldItemPosition, int newItemPosition) {
+                Thread oldItem = threads.get(oldItemPosition);
+                Thread newItem = newThreads.get(newItemPosition);
+                return oldItem.getPostNumber() == newItem.getPostNumber() &&
+                       oldItem.getTitle().equals(newItem.getTitle()) &&
+                       oldItem.getReplyCount() == newItem.getReplyCount() &&
+                       (oldItem.getLastReplyTime() == null ? "" : oldItem.getLastReplyTime())
+                           .equals(newItem.getLastReplyTime() == null ? "" : newItem.getLastReplyTime());
+            }
+        });
+
+        this.threads.clear();
+        this.threads.addAll(newThreads);
+        diffResult.dispatchUpdatesTo(this);
     }
 
     @NonNull

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- 預設禁止所有明文 (HTTP) 流量，除非在 domain-config 中明確允許 -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- 針對 Komica 相關網域允許 HTTP 流量，因為其生態系中仍有許多 HTTP 資源 -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">komica1.org</domain>
+        <domain includeSubdomains="true">komica.org</domain>
+        <domain includeSubdomains="true">lireservice.com</domain>
+        <domain includeSubdomains="true">p.komica.org</domain>
+        <domain includeSubdomains="true">gaia.komica1.org</domain>
+    </domain-config>
+</network-security-config>
