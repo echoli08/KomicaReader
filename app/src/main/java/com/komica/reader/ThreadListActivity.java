@@ -33,6 +33,7 @@ import android.widget.TextView;
 
 import com.komica.reader.viewmodel.ThreadListViewModel;
 import com.komica.reader.viewmodel.ThreadListViewModelFactory;
+import com.komica.reader.util.KLog;
 import androidx.lifecycle.ViewModelProvider;
 
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -125,9 +126,23 @@ public class ThreadListActivity extends AppCompatActivity {
 
         viewModel.getIsLoading().observe(this, isLoading -> {
             if (!swipeRefreshLayout.isRefreshing()) {
-                progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+                // Show progress bar only if the list is currently empty
+                boolean isEmpty = threads.isEmpty();
+                progressBar.setVisibility(isLoading && isEmpty ? View.VISIBLE : View.GONE);
             }
         });
+
+        viewModel.getErrorMessage().observe(this, error -> {
+            if (error != null) {
+                showErrorSnackBar(error);
+            }
+        });
+    }
+
+    private void showErrorSnackBar(String message) {
+        com.google.android.material.snackbar.Snackbar.make(recyclerView, message, com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
+                .setAction("重試", v -> viewModel.refresh())
+                .show();
     }
 
     private void shareThread(Thread thread) {

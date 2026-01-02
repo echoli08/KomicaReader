@@ -12,11 +12,15 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.concurrent.Callable;
 import com.komica.reader.model.Board;
 import com.komica.reader.model.BoardCategory;
 import com.komica.reader.model.Thread;
 import com.komica.reader.model.Post;
+
+import com.komica.reader.util.KLog;
 
 public class KomicaService {
     private static final String BASE_URL = "http://komica1.org";
@@ -137,29 +141,54 @@ public class KomicaService {
 
         @Override
         public List<Thread> call() throws Exception {
-            String scriptUrl = boardUrl;
-            // Normalize URL to point to pixmicat.php
-            if (scriptUrl.endsWith("/")) {
-                scriptUrl += "pixmicat.php";
-            } else if (scriptUrl.endsWith("index.htm") || scriptUrl.endsWith("index.html")) {
-                scriptUrl = scriptUrl.substring(0, scriptUrl.lastIndexOf("/")) + "/pixmicat.php";
-            } else if (!scriptUrl.contains(".php")) {
-                scriptUrl += "/pixmicat.php";
-            }
+            String baseUrl = boardUrl;
+            baseUrl = baseUrl.replaceAll("(index\\.html?|pixmicat\\.php)$", "");
+            if (!baseUrl.endsWith("/")) baseUrl += "/";
 
-            String searchUrl = scriptUrl + "?mode=search&keyword=" + java.net.URLEncoder.encode(query, "UTF-8");
+            String searchUrl = baseUrl + "pixmicat.php";
+            boolean isGaia = baseUrl.contains("gaia.komica1.org") || baseUrl.contains("sora.komica.org");
+            String charset = isGaia ? "Big5" : "UTF-8";
             
-            android.util.Log.d("Komica", "Board Search URL: " + searchUrl);
+            KLog.d("Board Search POST URL: " + searchUrl + " | Query: " + query + " | Charset: " + charset);
+
+            // Manually construct the byte stream for the form body
+            // This is the most reliable way to handle Big5/UTF-8 mixtures in older PHP scripts
+            StringBuilder sb = new StringBuilder();
+            sb.append("mode=search");
+            sb.append("&search_target=all");
+            sb.append("&andor=and");
+            sb.append("&keyword=").append(java.net.URLEncoder.encode(query, charset));
+            // Gaia boards often REQUIRE the submit button value to be present
+            sb.append("&search=").append(java.net.URLEncoder.encode("搜尋", charset));
+            
+            byte[] postBytes = sb.toString().getBytes("ISO-8859-1"); // OkHttp handles the wire transfer
+            // Actually, get bytes in the target charset directly for raw creation
+            postBytes = sb.toString().getBytes(); // Already URL encoded, so ASCII bytes are fine
+
+            RequestBody body = RequestBody.create(
+                postBytes, 
+                okhttp3.MediaType.parse("application/x-www-form-urlencoded")
+            );
 
             Request request = new Request.Builder()
                     .url(searchUrl)
+                    .post(body)
+                    .header("Referer", baseUrl)
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                     .build();
 
             Response response = client.newCall(request).execute();
-            String html = response.body().string();
-
-            // Use dedicated parser for search results
-            return parseSearchResults(html, boardUrl);
+            byte[] responseBytes = response.body().bytes();
+            
+            // Try auto-detect, then fallback to Big5 if it's Gaia
+            Document doc = Jsoup.parse(new java.io.ByteArrayInputStream(responseBytes), null, baseUrl);
+            String title = doc.title();
+            if (isGaia || title.contains("") || title.contains("?")) {
+                KLog.w("Forcing Big5 decoding for response...");
+                doc = Jsoup.parse(new java.io.ByteArrayInputStream(responseBytes), "Big5", baseUrl);
+            }
+            
+            return parseSearchResults(doc, boardUrl);
         }
     }
 
@@ -174,22 +203,20 @@ public class KomicaService {
         public List<Thread> call() throws Exception {
             String searchUrl = BASE_URL + "/?mode=search&keyword=" + java.net.URLEncoder.encode(query, "UTF-8");
 
-            android.util.Log.d("Komica", "Search URL: " + searchUrl);
+            KLog.d("Search URL: " + searchUrl);
 
             Request request = new Request.Builder()
                     .url(searchUrl)
                     .build();
 
             Response response = client.newCall(request).execute();
-            String html = response.body().string();
+            Document doc = Jsoup.parse(response.body().byteStream(), null, BASE_URL);
 
-            android.util.Log.d("Komica", "Search response length: " + html.length());
-
-            return parseSearchResults(html, BASE_URL);
+            return parseSearchResults(doc, BASE_URL);
         }
     }
 
-    private static List<BoardCategory> parseBoards(String html) {
+    public static List<BoardCategory> parseBoards(String html) {
         List<BoardCategory> categories = new ArrayList<>();
         
         String[] excludedCategories = {"聊天室", "外部連結", "失效連結"};
@@ -234,143 +261,103 @@ public class KomicaService {
         return categories;
     }
 
-    private static List<Thread> parseSearchResults(String html, String boardUrl) {
+    public static List<Thread> parseSearchResults(Document doc, String boardUrl) {
         List<Thread> threads = new ArrayList<>();
-        Document doc = Jsoup.parse(html);
 
-        // Try standard thread structure first
-        Elements elements = doc.select("div.thread");
-        boolean isThreadStructure = true;
+        // 1. Validation
+        String pageTitle = doc.title();
+        KLog.d("parseSearchResults: Page title: " + pageTitle);
         
-        if (elements.isEmpty()) {
-            // Fallback to finding individual posts (sometimes search results are just a list of posts)
-            elements = doc.select("div.post");
-            isThreadStructure = false;
+        // Relaxed search check: look for search markers in title or lack of index pagination
+        boolean hasSearchMarker = pageTitle.contains("搜尋") || pageTitle.contains("Search") || pageTitle.contains("?");
+        boolean hasIndexPagination = doc.selectFirst(".paginfo, .pages, .pginfo") != null;
+        
+        if (hasIndexPagination && !hasSearchMarker) {
+            KLog.w("parseSearchResults: Detected index page instead of search results.");
+            return threads;
         }
 
-        android.util.Log.d("Komica", "Search parsing: found " + elements.size() + " elements (Thread structure: " + isThreadStructure + ")");
+        // 2. Main Content
+        Element mainForm = doc.selectFirst("form#delform, form[name='delform']");
+        Elements postElements = (mainForm != null) 
+            ? mainForm.select("div.post, div[id^='r'], div[id^='p'], td.reply, td.post-body")
+            : doc.select("div.post, td.reply, td.post-body");
 
-        for (Element element : elements) {
-            Element postElement;
-            if (isThreadStructure) {
-                postElement = element.selectFirst("div.post");
-            } else {
-                postElement = element;
-            }
-
-            if (postElement == null) continue;
+        for (Element postElement : postElements) {
+            if (postElement.hasClass("nav") || postElement.id().equals("notice")) continue;
 
             String title = DEFAULT_TITLE;
             String author = DEFAULT_AUTHOR;
-            String threadUrl = "";
-            String imageUrl = "";
             int postNumber = 0;
+            int parentThreadNo = 0;
             String contentPreview = "";
             String lastReplyTime = "";
 
-            // Parse Title
-            Element titleElement = postElement.selectFirst("span.title");
-            if (titleElement != null) {
-                title = titleElement.text().trim();
+            // res= link usually means parent thread
+            Element resLink = postElement.selectFirst("a[href*='res=']");
+            if (resLink != null) {
+                Matcher m = Pattern.compile("res=(\\d+)").matcher(resLink.attr("href"));
+                if (m.find()) parentThreadNo = Integer.parseInt(m.group(1));
             }
 
-            // Parse Author
-            Element nameElement = postElement.selectFirst("span.name");
-            if (nameElement != null) {
-                author = nameElement.text().trim();
-            }
-
-            // Parse Link & Post Number
-            // Try span.qlink first (standard)
-            Element qlinkElement = postElement.selectFirst("span.qlink");
-            if (qlinkElement != null) {
-                String dataNo = qlinkElement.attr("data-no");
-                if (!dataNo.isEmpty()) {
-                    try {
-                        postNumber = Integer.parseInt(dataNo);
-                    } catch (NumberFormatException e) {
-                        postNumber = 0;
-                    }
-                    threadUrl = "pixmicat.php?res=" + dataNo;
+            // Number check
+            Element qlink = postElement.selectFirst(".qlink, .now a, .relink");
+            if (qlink != null) {
+                String numText = qlink.text().replaceAll("[^0-9]", "");
+                if (!numText.isEmpty()) {
+                    try { postNumber = Integer.parseInt(numText); } catch (Exception ignored) {}
                 }
             }
             
-            // Fallback: Try "Reply" link if qlink failed
-            if (threadUrl.isEmpty()) {
-                Element replyLink = postElement.selectFirst("span.rlink a"); // "回覆"
-                if (replyLink == null) {
-                    // Sometimes it's "No.xxx" link
-                    Elements links = postElement.select("a");
-                    for (Element link : links) {
-                        if (link.text().startsWith("No.")) {
-                            replyLink = link;
-                            break;
-                        }
-                    }
-                }
-                
-                if (replyLink != null) {
-                    threadUrl = replyLink.attr("href");
-                    if (postNumber == 0) {
-                        String txt = replyLink.text().replace("No.", "").trim();
-                        try { postNumber = Integer.parseInt(txt); } catch (Exception e) {}
-                    }
+            if (postNumber <= 0) {
+                Element checkbox = postElement.selectFirst("input[type='checkbox']");
+                if (checkbox != null) {
+                    String val = checkbox.attr("value");
+                    if (val.matches("\\d+")) postNumber = Integer.parseInt(val);
                 }
             }
 
-            // Parse Image
-            Element thumbElement = postElement.selectFirst("a.file-thumb img.img");
-            if (thumbElement != null) {
-                imageUrl = thumbElement.attr("src");
-            }
+            if (postNumber <= 0) continue;
 
-            // Parse Content (Quote)
-            Element quoteElement = postElement.selectFirst("div.quote");
-            if (quoteElement != null) {
-                String content = parseQuoteContent(quoteElement);
-                if (content.length() > 100) {
-                    contentPreview = content.substring(0, 100) + "...";
-                } else {
-                    contentPreview = content;
-                }
-            }
+            Element quoteElement = postElement.selectFirst("div.quote, .comment, blockquote");
+            if (quoteElement != null) contentPreview = parseQuoteContent(quoteElement);
             
-            // Parse Time
-            Element nowElement = postElement.selectFirst("span.now");
-            if (nowElement != null) {
-                lastReplyTime = nowElement.text().trim();
-            }
+            Element thumbElement = postElement.selectFirst("img.img, .file-thumb img");
+            if (contentPreview.trim().length() < 2 && thumbElement == null) continue;
 
-            if (!threadUrl.isEmpty()) {
-                // Determine if title is missing, use content preview
-                if (title.equals(DEFAULT_TITLE) && !contentPreview.isEmpty()) {
-                    // Use first line of content as title if title is missing
+            int finalThreadId = (parentThreadNo > 0) ? parentThreadNo : postNumber;
+
+            Element titleElement = postElement.selectFirst("span.title, b, font[color='#cc1105']");
+            if (titleElement != null && !titleElement.text().trim().isEmpty()) title = titleElement.text().trim();
+
+            Element nameElement = postElement.selectFirst("span.name, .postername, font[color='#117743']");
+            if (nameElement != null) author = nameElement.text().trim();
+
+            String imageUrl = (thumbElement != null) ? thumbElement.attr("src") : "";
+
+            if (title.equals(DEFAULT_TITLE) || title.isEmpty()) {
+                if (parentThreadNo > 0) title = "回覆於 No." + parentThreadNo;
+                else {
                     String[] lines = contentPreview.split("\n");
-                    if (lines.length > 0) {
-                        title = lines[0];
-                        if (title.length() > 30) title = title.substring(0, 30) + "...";
-                    }
+                    title = lines.length > 0 ? lines[0] : DEFAULT_TITLE;
                 }
-
-                String resolvedThreadUrl = resolveUrl(boardUrl, threadUrl);
-                
-                Thread thread = new Thread(
-                        String.valueOf(System.currentTimeMillis()) + "-" + postNumber,
-                        title,
-                        author,
-                        0, // Reply count usually unknown in search results
-                        resolvedThreadUrl
-                );
-                thread.setPostNumber(postNumber);
-                thread.setImageUrl(resolveUrl(boardUrl, imageUrl));
-                thread.setContentPreview(contentPreview);
-                thread.setLastReplyTime(lastReplyTime);
-
-                threads.add(thread);
+                if (title.length() > 40) title = title.substring(0, 40) + "...";
             }
+            
+            Element nowElement = postElement.selectFirst("span.now, .postertime, font[size='-1']");
+            if (nowElement != null) lastReplyTime = nowElement.text().trim();
+
+            String resolvedThreadUrl = resolveUrl(boardUrl, "pixmicat.php?res=" + finalThreadId);
+            Thread thread = new Thread("search-" + postNumber, title, author, 0, resolvedThreadUrl);
+            thread.setPostNumber(postNumber);
+            thread.setImageUrl(resolveUrl(boardUrl, imageUrl));
+            thread.setContentPreview(contentPreview);
+            thread.setLastReplyTime(lastReplyTime);
+
+            threads.add(thread);
         }
 
-        android.util.Log.d("Komica", "Parsed " + threads.size() + " search results");
+        KLog.d("parseSearchResults: Parsed " + threads.size() + " validated search results");
         return threads;
     }
 
@@ -405,14 +392,21 @@ public class KomicaService {
         return result;
     }
 
-    private static List<Thread> parseThreads(String html, String boardUrl) {
+    public static List<Thread> parseThreads(String html, String boardUrl) {
         List<Thread> threads = new ArrayList<>();
         Document doc = Jsoup.parse(html);
 
-        android.util.Log.d("Komica", "Starting to parse threads from board URL: " + boardUrl);
+        KLog.d("parseThreads: Parsing HTML (length=" + html.length() + ") from " + boardUrl);
 
         Elements threadElements = doc.select("div.thread");
-        android.util.Log.d("Komica", "Found " + threadElements.size() + " thread elements");
+        if (threadElements.isEmpty()) {
+            KLog.w("parseThreads: No div.thread found! Possible layout change or parse error.");
+            // Fallback: check if it's an old-style table layout (less common now but good for safety)
+            threadElements = doc.select("form[name='delform'] > table");
+            if (!threadElements.isEmpty()) KLog.i("parseThreads: Found old-style table layout");
+        }
+        
+        KLog.d("parseThreads: Found " + threadElements.size() + " thread elements");
 
         for (int i = 0; i < threadElements.size(); i++) {
             Element threadElement = threadElements.get(i);
@@ -547,16 +541,19 @@ public class KomicaService {
         return threads;
     }
 
-    private static Thread parseThreadDetail(String html, String threadUrl) {
+    public static Thread parseThreadDetail(String html, String threadUrl) {
         Document doc = Jsoup.parse(html);
 
-        android.util.Log.d("Komica", "Parsing thread detail from: " + threadUrl);
+        KLog.d("parseThreadDetail: Parsing HTML from: " + threadUrl);
 
         String title = DEFAULT_TITLE;
         String author = DEFAULT_AUTHOR;
         String imageUrl = "";
 
         Element threadContainer = doc.selectFirst("div.thread");
+        if (threadContainer == null) {
+            KLog.w("parseThreadDetail: div.thread container not found!");
+        }
         
         if (threadContainer != null) {
             Element threadPost = threadContainer.selectFirst("div.post.threadpost");

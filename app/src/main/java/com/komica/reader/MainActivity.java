@@ -25,6 +25,7 @@ import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.Toolbar;
 
 import com.komica.reader.viewmodel.MainViewModel;
+import com.komica.reader.util.KLog;
 import androidx.lifecycle.ViewModelProvider;
 
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -88,21 +89,30 @@ public class MainActivity extends AppCompatActivity {
         observeViewModel();
         
         if (savedInstanceState == null) {
+            // First time load or fresh start
             viewModel.loadBoards();
+        } else {
+            // Activity was recreated (e.g., theme change)
+            // ViewModel already has the data, LiveData will emit it to the observer
+            KLog.d("MainActivity recreated, data should be in ViewModel");
         }
     }
 
     private void observeViewModel() {
         viewModel.getCategories().observe(this, newCategories -> {
-            categories.clear();
-            categories.addAll(newCategories);
-            categoryAdapter.notifyDataSetChanged();
+            if (newCategories != null && !newCategories.isEmpty()) {
+                categories.clear();
+                categories.addAll(newCategories);
+                categoryAdapter.notifyDataSetChanged();
+            }
             swipeRefreshLayout.setRefreshing(false);
         });
 
         viewModel.getIsLoading().observe(this, isLoading -> {
+            // Only show central progress bar if we don't have data yet
+            boolean hasData = categories != null && !categories.isEmpty();
             if (!swipeRefreshLayout.isRefreshing()) {
-                progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+                progressBar.setVisibility(isLoading && !hasData ? View.VISIBLE : View.GONE);
             }
         });
 

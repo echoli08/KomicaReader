@@ -22,6 +22,7 @@ import androidx.appcompat.widget.Toolbar;
 
 import com.komica.reader.viewmodel.ThreadDetailViewModel;
 import com.komica.reader.viewmodel.ThreadDetailViewModelFactory;
+import com.komica.reader.util.KLog;
 import androidx.lifecycle.ViewModelProvider;
 import java.util.concurrent.Executors;
 

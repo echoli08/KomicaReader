@@ -24,6 +24,7 @@ public class ThreadListViewModel extends ViewModel {
     private final Set<String> existingThreadUrls = new HashSet<>();
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
     private final MutableLiveData<Boolean> hasMore = new MutableLiveData<>(true);
+    private final MutableLiveData<String> errorMessage = new MutableLiveData<>();
     
     private int currentPage = 0;
     private String currentSearchQuery = "";
@@ -46,6 +47,10 @@ public class ThreadListViewModel extends ViewModel {
 
     public LiveData<Boolean> getHasMore() {
         return hasMore;
+    }
+
+    public LiveData<String> getErrorMessage() {
+        return errorMessage;
     }
 
     public boolean isRemoteSearchMode() {
@@ -80,6 +85,9 @@ public class ThreadListViewModel extends ViewModel {
                 isLoading.setValue(false);
                 
                 if (newThreads == null || newThreads.isEmpty()) {
+                    if (page == 0) {
+                        errorMessage.setValue("無法取得資料或該板塊目前沒有主題");
+                    }
                     hasMore.setValue(false);
                 } else {
                     currentPage = page;
@@ -105,7 +113,7 @@ public class ThreadListViewModel extends ViewModel {
                 }
                 
                 // Always ensure displayThreads has something if it's the first load
-                if (page == 0 && displayThreads.getValue() != null && displayThreads.getValue().isEmpty()) {
+                if (page == 0 && (displayThreads.getValue() == null || displayThreads.getValue().isEmpty())) {
                     applyFiltersAndSort();
                 }
             }
@@ -129,7 +137,7 @@ public class ThreadListViewModel extends ViewModel {
         
         isLoading.setValue(true);
         isRemoteSearchMode = true;
-        hasMore.setValue(false); // Search results usually don't support pagination easily here
+        hasMore.setValue(false);
 
         LiveData<List<Thread>> source = repository.searchThreads(board.getUrl(), currentSearchQuery);
         source.observeForever(new androidx.lifecycle.Observer<List<Thread>>() {
@@ -137,10 +145,11 @@ public class ThreadListViewModel extends ViewModel {
             public void onChanged(List<Thread> results) {
                 source.removeObserver(this);
                 isLoading.setValue(false);
-                if (results != null) {
+                if (results != null && !results.isEmpty()) {
                     displayThreads.setValue(results);
                 } else {
                     displayThreads.setValue(new ArrayList<>());
+                    errorMessage.setValue("找不到符合的搜尋結果");
                 }
             }
         });
