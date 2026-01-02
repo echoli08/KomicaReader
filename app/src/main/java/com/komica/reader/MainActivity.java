@@ -65,6 +65,12 @@ public class MainActivity extends AppCompatActivity {
         );
 
         recyclerView.setAdapter(categoryAdapter);
+        
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setHomeAsUpIndicator(R.drawable.ic_settings);
+        }
+        
         loadBoards();
     }
 
@@ -85,7 +91,7 @@ public class MainActivity extends AppCompatActivity {
             prefs.edit().putBoolean("night_mode", !isNightMode).apply();
             recreate(); // Recreate activity to apply theme
             return true;
-        } else if (item.getItemId() == R.id.action_settings) {
+        } else if (item.getItemId() == android.R.id.home) {
             Intent intent = new Intent(this, SettingsActivity.class);
             startActivity(intent);
             return true;
