@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import androidx.appcompat.widget.Toolbar;
+
 public class ThreadDetailActivity extends AppCompatActivity {
 
     private TextView threadTitle;
@@ -41,6 +43,13 @@ public class ThreadDetailActivity extends AppCompatActivity {
 
         Thread thread = (Thread) getIntent().getSerializableExtra("thread");
         currentThread = thread;
+        
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayShowTitleEnabled(false);
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
 
         threadTitle = findViewById(R.id.threadTitle);
         recyclerView = findViewById(R.id.recyclerView);

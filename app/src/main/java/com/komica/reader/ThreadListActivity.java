@@ -28,6 +28,9 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import androidx.appcompat.widget.Toolbar;
+import android.widget.TextView;
+
 public class ThreadListActivity extends AppCompatActivity {
 
     private RecyclerView recyclerView;
@@ -56,6 +59,18 @@ public class ThreadListActivity extends AppCompatActivity {
         favoritesManager = FavoritesManager.getInstance(this);
 
         currentBoard = (Board) getIntent().getSerializableExtra("board");
+        
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayShowTitleEnabled(false);
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
+        
+        TextView toolbarTitle = findViewById(R.id.toolbarTitle);
+        if (currentBoard != null) {
+            toolbarTitle.setText(currentBoard.getName());
+        }
 
         recyclerView = findViewById(R.id.recyclerView);
         progressBar = findViewById(R.id.progressBar);

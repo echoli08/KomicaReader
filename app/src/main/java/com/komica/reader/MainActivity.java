@@ -22,6 +22,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.content.SharedPreferences;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.appcompat.widget.Toolbar;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -45,6 +46,14 @@ public class MainActivity extends AppCompatActivity {
             
         setContentView(R.layout.activity_main);
         
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayShowTitleEnabled(false);
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            getSupportActionBar().setHomeAsUpIndicator(R.drawable.ic_settings);
+        }
+        
         favoritesManager = FavoritesManager.getInstance(this);
 
         recyclerView = findViewById(R.id.recyclerView);
@@ -65,11 +74,6 @@ public class MainActivity extends AppCompatActivity {
         );
 
         recyclerView.setAdapter(categoryAdapter);
-        
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setHomeAsUpIndicator(R.drawable.ic_settings);
-        }
         
         loadBoards();
     }

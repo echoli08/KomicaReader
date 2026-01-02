@@ -6,6 +6,8 @@ import android.view.View;
 import android.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import androidx.appcompat.widget.Toolbar;
+
 public class SettingsActivity extends AppCompatActivity {
 
     @Override
@@ -13,9 +15,11 @@ public class SettingsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
         
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayShowTitleEnabled(false);
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle("設定");
         }
         
         findViewById(R.id.btn_about).setOnClickListener(v -> showAboutDialog());
