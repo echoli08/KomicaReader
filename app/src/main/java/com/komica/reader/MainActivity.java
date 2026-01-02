@@ -18,6 +18,11 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import android.view.Menu;
+import android.view.MenuItem;
+import android.content.SharedPreferences;
+import androidx.appcompat.app.AppCompatDelegate;
+
 public class MainActivity extends AppCompatActivity {
 
     private RecyclerView recyclerView;
@@ -27,10 +32,17 @@ public class MainActivity extends AppCompatActivity {
     private List<BoardCategory> originalCategories = new ArrayList<>();
     private ExecutorService executor = Executors.newSingleThreadExecutor();
     private FavoritesManager favoritesManager;
+    private SharedPreferences prefs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        prefs = getSharedPreferences("KomicaReader", MODE_PRIVATE);
+        boolean isNightMode = prefs.getBoolean("night_mode", false);
+        AppCompatDelegate.setDefaultNightMode(isNightMode ? 
+            AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
+            
         setContentView(R.layout.activity_main);
         
         favoritesManager = FavoritesManager.getInstance(this);
@@ -54,6 +66,26 @@ public class MainActivity extends AppCompatActivity {
 
         recyclerView.setAdapter(categoryAdapter);
         loadBoards();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        MenuItem item = menu.findItem(R.id.action_theme_toggle);
+        boolean isNightMode = prefs.getBoolean("night_mode", false);
+        item.setTitle(isNightMode ? "切換日間模式" : "切換夜間模式");
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.action_theme_toggle) {
+            boolean isNightMode = prefs.getBoolean("night_mode", false);
+            prefs.edit().putBoolean("night_mode", !isNightMode).apply();
+            recreate(); // Recreate activity to apply theme
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     private void loadBoards() {
