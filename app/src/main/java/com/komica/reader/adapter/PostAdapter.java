@@ -39,6 +39,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
 
     public interface OnQuoteInteractionListener {
         void onImageClick(int imageIndex, List<String> imageUrls);
+        void onImageLongClick(String imageUrl);
         void onQuoteClick(int position);
         void onQuoteLongClick(Post post);
         void onQuoteReleased();
@@ -232,6 +233,15 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                         if (interactionListener != null) {
                             interactionListener.onImageClick(index, allImageUrls);
                         }
+                    });
+                    
+                    final String finalImageUrl = displayImageUrl;
+                    postImage.setOnLongClickListener(v -> {
+                        if (interactionListener != null) {
+                            interactionListener.onImageLongClick(finalImageUrl);
+                            return true;
+                        }
+                        return false;
                     });
                 }
             } else {

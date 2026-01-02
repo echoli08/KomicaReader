@@ -94,6 +94,31 @@ public class ThreadDetailActivity extends AppCompatActivity {
         }
     }
 
+    private void shareImage(String imageUrl) {
+        executor.execute(() -> {
+            try {
+                java.io.File file = com.bumptech.glide.Glide.with(this)
+                    .asFile()
+                    .load(imageUrl)
+                    .submit()
+                    .get();
+                    
+                android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(this, 
+                    getApplicationContext().getPackageName() + ".fileprovider", file);
+                    
+                Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                shareIntent.setType("image/*");
+                shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
+                shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                
+                startActivity(Intent.createChooser(shareIntent, "分享圖片"));
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> android.widget.Toast.makeText(this, "分享圖片失敗", android.widget.Toast.LENGTH_SHORT).show());
+            }
+        });
+    }
+
     private String resolveFullUrl(String url) {
         if (url.startsWith("http://") || url.startsWith("https://")) {
             return url;
@@ -118,6 +143,11 @@ public class ThreadDetailActivity extends AppCompatActivity {
                             intent.putStringArrayListExtra("imageUrls", new ArrayList<>(imageUrls));
                             intent.putExtra("position", imageIndex);
                             startActivity(intent);
+                        }
+
+                        @Override
+                        public void onImageLongClick(String imageUrl) {
+                            shareImage(imageUrl);
                         }
 
                         @Override
