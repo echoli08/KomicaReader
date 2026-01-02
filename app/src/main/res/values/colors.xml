@@ -1,18 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Brand Colors -->
     <color name="primary">#FF9800</color>
     <color name="primary_dark">#F57C00</color>
     <color name="accent">#FFC107</color>
     
-    <color name="background">#FFFFFF</color>
-    <color name="background_dark">#121212</color>
+    <!-- UI Colors (Day) -->
+    <color name="window_background">#FFFFFF</color>
+    <color name="content_background">#F5F5F5</color>
+    <color name="header_background">#E0E0E0</color>
     
     <color name="text_primary">#000000</color>
-    <color name="text_primary_dark">#FFFFFF</color>
-    
     <color name="text_secondary">#666666</color>
-    <color name="text_secondary_dark">#B0B0B0</color>
+    <color name="text_author">#333333</color>
+    <color name="text_link">#2196F3</color>
     
-    <color name="card_background">#F5F5F5</color>
-    <color name="card_background_dark">#1E1E1E</color>
+    <color name="quote_preview_background">#FFF8E1</color>
+    <color name="quote_text">#789922</color>
+    
+    <!-- Thread List Item Colors -->
+    <color name="thread_id_text">#999999</color>
+    <color name="thread_title_text">#212121</color>
+    <color name="thread_author_text">#666666</color>
+    <color name="thread_preview_text">#424242</color>
+    <color name="reply_count_text">#1976D2</color>
 </resources>

@@ -18,7 +18,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="11sp"
-            android:textColor="#999999"
+            android:textColor="@color/thread_id_text"
             android:textStyle="bold" />
 
         <TextView
@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:textSize="16sp"
-            android:textColor="#212121"
+            android:textColor="@color/thread_title_text"
             android:textStyle="bold" />
 
         <TextView
@@ -36,7 +36,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:textSize="12sp"
-            android:textColor="#666666" />
+            android:textColor="@color/thread_author_text" />
 
         <TextView
             android:id="@+id/contentPreview"
@@ -44,7 +44,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:textSize="12sp"
-            android:textColor="#424242"
+            android:textColor="@color/thread_preview_text"
             android:maxLines="4"
             android:ellipsize="end" />
 
@@ -60,7 +60,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="12sp"
-                android:textColor="#1976D2"
+                android:textColor="@color/reply_count_text"
                 android:textStyle="bold"
                 android:layout_marginEnd="16dp"
                 android:text="回覆: 0" />
@@ -71,7 +71,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:textSize="11sp"
-                android:textColor="#999999" />
+                android:textColor="@color/thread_id_text" />
 
             <ImageView
                 android:id="@+id/shareButton"

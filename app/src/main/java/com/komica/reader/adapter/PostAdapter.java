@@ -86,8 +86,11 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         return posts.size();
     }
 
-    private SpannableString createSpannableContent(String content) {
+    private SpannableString createSpannableContent(android.content.Context context, String content) {
         SpannableString spannable = new SpannableString(content);
+        
+        int quoteColor = androidx.core.content.ContextCompat.getColor(context, R.color.quote_text);
+        int linkColor = androidx.core.content.ContextCompat.getColor(context, R.color.text_link);
         
         // 1. Handle Green Text (lines starting with >)
         String[] lines = content.split("\n");
@@ -96,7 +99,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             // If it starts with > but is not followed by a number link
             if (line.startsWith(">") && !line.matches("^>>?\\d+.*")) {
                 int end = Math.min(currentPos + line.length(), spannable.length());
-                spannable.setSpan(new ForegroundColorSpan(0xFF789922), 
+                spannable.setSpan(new ForegroundColorSpan(quoteColor), 
                     currentPos, end, 
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
@@ -119,7 +122,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                     @Override
                     public void updateDrawState(@NonNull TextPaint ds) {
                         super.updateDrawState(ds);
-                        ds.setColor(0xFF2196F3);
+                        ds.setColor(linkColor);
                         ds.setUnderlineText(true);
                     }
                 };
@@ -160,7 +163,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                 @Override
                 public void updateDrawState(@NonNull TextPaint ds) {
                     super.updateDrawState(ds);
-                    ds.setColor(0xFF2196F3);
+                    ds.setColor(linkColor);
                     ds.setUnderlineText(true);
                 }
             };
@@ -201,7 +204,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                 postContent.setText("(無內容)");
                 postContent.setVisibility(View.GONE);
             } else {
-                SpannableString spannable = createSpannableContent(content);
+                SpannableString spannable = createSpannableContent(itemView.getContext(), content);
                 postContent.setText(spannable);
                 postContent.setMovementMethod(null);
                 postContent.setVisibility(View.VISIBLE);

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand Colors -->
+    <color name="primary">#FF9800</color>
+    <color name="primary_dark">#F57C00</color>
+    <color name="accent">#FFC107</color>
+    
+    <!-- UI Colors (Night) -->
+    <color name="window_background">#121212</color>
+    <color name="content_background">#1E1E1E</color>
+    <color name="header_background">#2C2C2C</color>
+    
+    <color name="text_primary">#E0E0E0</color>
+    <color name="text_secondary">#B0B0B0</color>
+    <color name="text_author">#CCCCCC</color>
+    <color name="text_link">#64B5F6</color>
+    
+    <color name="quote_preview_background">#333333</color>
+    <color name="quote_text">#9CCC65</color>
+    
+    <!-- Thread List Item Colors -->
+    <color name="thread_id_text">#888888</color>
+    <color name="thread_title_text">#E0E0E0</color>
+    <color name="thread_author_text">#B0B0B0</color>
+    <color name="thread_preview_text">#CCCCCC</color>
+    <color name="reply_count_text">#64B5F6</color>
+</resources>
