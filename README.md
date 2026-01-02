@@ -25,6 +25,16 @@ Komica Reader 是一款專為瀏覽 Komica 匿名討論板設計的 Android 應�
 8. **圖片預覽**：支援全螢幕圖片檢視，可透過滑動切換瀏覽串列中的多張圖片，並優化縮圖顯示大小
 9. **響應式介面**：採用 Material Design 風格，提供流暢且直觀的使用者體驗
 
+## 截圖預覽
+
+<p align="center">
+  <img src="Screenshot/Screenshot_20260102_101029_Komica Reader.jpg" height="400" />
+  <img src="Screenshot/Screenshot_20260102_101032_Komica Reader.jpg" height="400" />
+  <img src="Screenshot/Screenshot_20260102_101039_Komica Reader.jpg" height="400" />
+  <img src="Screenshot/Screenshot_20260102_101049_Komica Reader.jpg" height="400" />
+  <img src="Screenshot/Screenshot_20260102_101054_Komica Reader.jpg" height="400" />
+</p>
+
 ## 未完成功能
 
 以下功能尚在計畫或開發中：
