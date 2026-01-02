@@ -5,6 +5,7 @@
     android:layout_height="wrap_content"
     android:layout_margin="4dp"
     app:cardCornerRadius="8dp"
+    app:cardBackgroundColor="@color/content_background"
     app:cardElevation="2dp">
 
     <LinearLayout
@@ -20,7 +21,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:textSize="16sp"
-            android:textColor="#333333" />
+            android:textColor="@color/text_primary" />
 
         <ImageView
             android:id="@+id/favoriteIcon"
