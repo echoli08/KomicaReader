@@ -31,6 +31,10 @@
             android:name=".ImagePreviewActivity"
             android:exported="false"
             android:screenOrientation="fullSensor" />
+            
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false" />
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />

@@ -73,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
         getMenuInflater().inflate(R.menu.main_menu, menu);
         MenuItem item = menu.findItem(R.id.action_theme_toggle);
         boolean isNightMode = prefs.getBoolean("night_mode", false);
+        item.setIcon(isNightMode ? R.drawable.ic_mode_day : R.drawable.ic_mode_night);
         item.setTitle(isNightMode ? "切換日間模式" : "切換夜間模式");
         return true;
     }
@@ -83,6 +84,10 @@ public class MainActivity extends AppCompatActivity {
             boolean isNightMode = prefs.getBoolean("night_mode", false);
             prefs.edit().putBoolean("night_mode", !isNightMode).apply();
             recreate(); // Recreate activity to apply theme
+            return true;
+        } else if (item.getItemId() == R.id.action_settings) {
+            Intent intent = new Intent(this, SettingsActivity.class);
+            startActivity(intent);
             return true;
         }
         return super.onOptionsItemSelected(item);
