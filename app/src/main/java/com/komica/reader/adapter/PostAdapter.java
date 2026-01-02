@@ -338,7 +338,8 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                                 if (recyclerView != null) {
                                     RecyclerView.ViewHolder targetHolder = recyclerView.findViewHolderForAdapterPosition(targetPos);
                                     if (targetHolder != null) {
-                                        targetHolder.itemView.setBackgroundColor(0xFFFFE0B2);
+                                        int highlightColor = androidx.core.content.ContextCompat.getColor(targetHolder.itemView.getContext(), R.color.highlight_background);
+                                        targetHolder.itemView.setBackgroundColor(highlightColor);
                                         targetHolder.itemView.postDelayed(() -> {
                                             targetHolder.itemView.setBackgroundColor(0x00000000);
                                         }, 1000);

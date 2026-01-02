@@ -1,14 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Brand Colors -->
-    <color name="primary">#FF9800</color>
-    <color name="primary_dark">#F57C00</color>
+    <color name="primary">#212121</color>
+    <color name="primary_dark">#000000</color>
     <color name="accent">#FFC107</color>
     
     <!-- UI Colors (Night) -->
     <color name="window_background">#121212</color>
     <color name="content_background">#1E1E1E</color>
     <color name="header_background">#2C2C2C</color>
+    <color name="search_input_background">#2C2C2C</color>
+    <color name="button_text_color">#FFFFFF</color>
+    
+    <color name="highlight_background">#5D4037</color>
+    <color name="preview_title_text">#FFB74D</color>
     
     <color name="text_primary">#E0E0E0</color>
     <color name="text_secondary">#B0B0B0</color>
