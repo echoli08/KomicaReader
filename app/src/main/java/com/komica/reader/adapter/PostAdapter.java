@@ -209,10 +209,15 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                 setupTouchListener(spannable);
             }
 
-            if (post.getThumbnailUrl() != null && !post.getThumbnailUrl().isEmpty()) {
+            String displayImageUrl = post.getImageUrl();
+            if (displayImageUrl == null || displayImageUrl.isEmpty()) {
+                displayImageUrl = post.getThumbnailUrl();
+            }
+
+            if (displayImageUrl != null && !displayImageUrl.isEmpty()) {
                 postImage.setVisibility(View.VISIBLE);
                 Glide.with(itemView.getContext())
-                        .load(post.getThumbnailUrl())
+                        .load(displayImageUrl)
                         .error(android.R.drawable.ic_menu_gallery)
                         .placeholder(android.R.drawable.ic_menu_gallery)
                         .into(postImage);
