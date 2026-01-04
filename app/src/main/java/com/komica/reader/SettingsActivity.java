@@ -26,12 +26,7 @@ public class SettingsActivity extends AppCompatActivity {
     }
     
     private void showAboutDialog() {
-        String versionName = "Unknown";
-        try {
-            versionName = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        String versionName = BuildConfig.VERSION_NAME;
         
         String message = "Komica Reader\n\n" +
                 "專為瀏覽 Komica 匿名討論板設計的閱讀器。\n" +
