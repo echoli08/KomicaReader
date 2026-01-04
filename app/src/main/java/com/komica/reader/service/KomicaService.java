@@ -161,13 +161,11 @@ public class KomicaService {
             // Gaia boards often REQUIRE the submit button value to be present
             sb.append("&search=").append(java.net.URLEncoder.encode("搜尋", charset));
             
-            byte[] postBytes = sb.toString().getBytes("ISO-8859-1"); // OkHttp handles the wire transfer
-            // Actually, get bytes in the target charset directly for raw creation
-            postBytes = sb.toString().getBytes(); // Already URL encoded, so ASCII bytes are fine
+            byte[] postBytes = sb.toString().getBytes(); 
 
             RequestBody body = RequestBody.create(
-                postBytes, 
-                okhttp3.MediaType.parse("application/x-www-form-urlencoded")
+                okhttp3.MediaType.parse("application/x-www-form-urlencoded"),
+                postBytes
             );
 
             Request request = new Request.Builder()
@@ -183,8 +181,9 @@ public class KomicaService {
             // Try auto-detect, then fallback to Big5 if it's Gaia
             Document doc = Jsoup.parse(new java.io.ByteArrayInputStream(responseBytes), null, baseUrl);
             String title = doc.title();
-            if (isGaia || title.contains("") || title.contains("?")) {
-                KLog.w("Forcing Big5 decoding for response...");
+            // Check if title is garbled or if we are on a Gaia board known to be Big5
+            if (isGaia || title.contains("\uFFFD")) {
+                KLog.w("Encoding issue suspected (title garbled or Gaia board), forcing Big5 decoding");
                 doc = Jsoup.parse(new java.io.ByteArrayInputStream(responseBytes), "Big5", baseUrl);
             }
             
@@ -233,7 +232,7 @@ public class KomicaService {
             boolean isExcluded = false;
             for (String excluded : excludedCategories) {
                 if (categoryName.contains(excluded)) {
-                    android.util.Log.d("Komica", "Excluding category: " + categoryName);
+                    KLog.d("Excluding category: " + categoryName);
                     isExcluded = true;
                     break;
                 }
