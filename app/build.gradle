@@ -47,6 +47,7 @@ dependencies {
     
     implementation(libs.androidx.lifecycle.viewmodel)
     implementation(libs.androidx.lifecycle.livedata)
+    implementation "androidx.lifecycle:lifecycle-process:2.7.0"
     
     implementation(libs.okhttp.core)
     implementation(libs.jsoup.core)

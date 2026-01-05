@@ -28,6 +28,11 @@ public class BoardAdapter extends RecyclerView.Adapter<BoardAdapter.BoardViewHol
         this.onFavoriteClickListener = favoriteListener;
     }
 
+    public void updateData(List<Board> newBoards) {
+        this.boards = newBoards;
+        notifyDataSetChanged();
+    }
+
     @NonNull
     @Override
     public BoardViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {

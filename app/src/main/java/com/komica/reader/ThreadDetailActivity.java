@@ -49,7 +49,21 @@ public class ThreadDetailActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_thread_detail);
 
-        currentThread = (Thread) getIntent().getSerializableExtra("thread");
+        if (getIntent().hasExtra("thread")) {
+            currentThread = (Thread) getIntent().getSerializableExtra("thread");
+        } else if (getIntent().hasExtra("thread_url")) {
+            String url = getIntent().getStringExtra("thread_url");
+            String title = getIntent().getStringExtra("thread_title");
+            // Create a lightweight thread object
+            currentThread = new Thread(
+                String.valueOf(System.currentTimeMillis()), // temp id
+                title != null ? title : "Loading...",
+                "",
+                0,
+                url
+            );
+        }
+
         if (currentThread == null) {
             finish();
             return;
@@ -164,7 +178,7 @@ public class ThreadDetailActivity extends AppCompatActivity {
             Intent shareIntent = new Intent(Intent.ACTION_SEND);
             shareIntent.setType("text/plain");
             
-            String shareText = currentThread.getTitle() + "\n\n" + resolveFullUrl(currentThread.getUrl());
+            String shareText = currentThread.getTitle() + "\n\n" + KomicaService.resolveUrl(currentThread.getUrl(), "");
             shareIntent.putExtra(Intent.EXTRA_TEXT, shareText);
             
             Intent chooserIntent = Intent.createChooser(shareIntent, "分享討論串");
@@ -196,13 +210,6 @@ public class ThreadDetailActivity extends AppCompatActivity {
                 runOnUiThread(() -> android.widget.Toast.makeText(this, "分享圖片失敗", android.widget.Toast.LENGTH_SHORT).show());
             }
         });
-    }
-
-    private String resolveFullUrl(String url) {
-        if (url.startsWith("http://") || url.startsWith("https://")) {
-            return url;
-        }
-        return "https://gaia.komica1.org/79/" + url;
     }
 
     @Override

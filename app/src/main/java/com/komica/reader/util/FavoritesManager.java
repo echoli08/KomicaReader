@@ -45,6 +45,8 @@ public class FavoritesManager {
         }
         
         cachedFavorites = newFavorites;
-        sharedPreferences.edit().putStringSet(KEY_FAVORITES, newFavorites).apply();
+        // Use commit() to ensure data is written to disk immediately
+        // Since the data set is small, the UI impact is negligible
+        sharedPreferences.edit().putStringSet(KEY_FAVORITES, newFavorites).commit();
     }
 }

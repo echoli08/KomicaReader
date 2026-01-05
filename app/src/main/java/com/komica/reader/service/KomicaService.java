@@ -24,7 +24,7 @@ import com.komica.reader.util.KLog;
 
 public class KomicaService {
     private static final String BASE_URL = "http://komica1.org";
-    private static OkHttpClient client = new OkHttpClient.Builder()
+    private static volatile OkHttpClient client = new OkHttpClient.Builder()
             .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
             .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
             .writeTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
@@ -42,7 +42,7 @@ public class KomicaService {
             })
             .build();
 
-    public static void setClient(OkHttpClient customClient) {
+    public static synchronized void setClient(OkHttpClient customClient) {
         client = customClient;
     }
     private static final String DEFAULT_TITLE = "Untitled";
@@ -388,7 +388,7 @@ public class KomicaService {
         return threads;
     }
 
-    private static String resolveUrl(String baseUrl, String href) {
+    public static String resolveUrl(String baseUrl, String href) {
         if (href == null || href.trim().isEmpty()) return "";
         String trimmed = href.trim();
 

@@ -95,7 +95,8 @@ public class ThreadListActivity extends AppCompatActivity {
             @Override
             public void onThreadClick(Thread thread) {
                 Intent intent = new Intent(ThreadListActivity.this, ThreadDetailActivity.class);
-                intent.putExtra("thread", thread);
+                intent.putExtra("thread_url", thread.getUrl());
+                intent.putExtra("thread_title", thread.getTitle());
                 startActivity(intent);
             }
 

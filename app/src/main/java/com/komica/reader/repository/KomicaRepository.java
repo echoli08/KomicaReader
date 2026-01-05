@@ -21,10 +21,16 @@ import okhttp3.Request;
 
 public class KomicaRepository {
     private static KomicaRepository instance;
+    
+    /**
+     * ExecutorService is kept alive for application lifetime.
+     * No need to explicitly shutdown as it's bound to singleton repository
+     * and follows the app process lifecycle.
+     */
     private final ExecutorService executor = Executors.newFixedThreadPool(4);
     
     // Memory Caches
-    private List<BoardCategory> boardCategoryCache;
+    private volatile List<BoardCategory> boardCategoryCache;
     private final LruCache<String, Thread> threadDetailCache = new LruCache<>(20); // Cache last 20 threads
 
     private KomicaRepository(Context context) {
@@ -75,16 +81,22 @@ public class KomicaRepository {
     public LiveData<List<BoardCategory>> fetchBoards(boolean forceRefresh) {
         MutableLiveData<List<BoardCategory>> data = new MutableLiveData<>();
         
-        if (!forceRefresh && boardCategoryCache != null) {
-            data.setValue(boardCategoryCache);
-            return data;
+        if (!forceRefresh) {
+            synchronized (this) {
+                if (boardCategoryCache != null) {
+                    data.setValue(boardCategoryCache);
+                    return data;
+                }
+            }
         }
 
         executor.execute(() -> {
             try {
                 List<BoardCategory> result = new KomicaService.FetchBoardsTask().call();
                 if (result != null) {
-                    boardCategoryCache = result;
+                    synchronized (this) {
+                        boardCategoryCache = result;
+                    }
                 }
                 data.postValue(result != null ? result : new java.util.ArrayList<>());
             } catch (Exception e) {

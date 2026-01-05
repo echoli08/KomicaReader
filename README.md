@@ -35,6 +35,7 @@ Komica Reader 是一款專為瀏覽 Komica 匿名討論板設計的 Android 應�
   <img src="https://raw.githubusercontent.com/echoli08/KomicaReader/refs/heads/master/ScreenShot/Screenshot_20260102_101039_Komica_Reader.jpg" height="400" />
   <img src="https://raw.githubusercontent.com/echoli08/KomicaReader/refs/heads/master/ScreenShot/Screenshot_20260102_101049_Komica_Reader.jpg" height="400" />
   <img src="https://raw.githubusercontent.com/echoli08/KomicaReader/refs/heads/master/ScreenShot/Screenshot_20260102_101054_Komica_Reader.jpg" height="400" />
+  <img src="https://raw.githubusercontent.com/echoli08/KomicaReader/refs/heads/master/ScreenShot/Screenshot_20260105_094601_Komica_Reader.jpg" height="400" />
 </p>
 
 ## 更新日誌

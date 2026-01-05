@@ -79,8 +79,13 @@ public class BoardCategoryAdapter extends RecyclerView.Adapter<BoardCategoryAdap
                 boardsRecyclerView.setVisibility(View.GONE);
             }
 
-            BoardAdapter boardAdapter = new BoardAdapter(category.getBoards(), onBoardClickListener, onFavoriteClickListener);
-            boardsRecyclerView.setAdapter(boardAdapter);
+            BoardAdapter boardAdapter = (BoardAdapter) boardsRecyclerView.getAdapter();
+            if (boardAdapter == null) {
+                boardAdapter = new BoardAdapter(category.getBoards(), onBoardClickListener, onFavoriteClickListener);
+                boardsRecyclerView.setAdapter(boardAdapter);
+            } else {
+                boardAdapter.updateData(category.getBoards());
+            }
         }
     }
 }

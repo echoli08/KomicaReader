@@ -27,6 +27,7 @@ public class ThreadListViewModel extends ViewModel {
     private final MutableLiveData<String> errorMessage = new MutableLiveData<>();
     
     private int currentPage = 0;
+    private int consecutiveEmptyPages = 0;
     private String currentSearchQuery = "";
     private boolean isRemoteSearchMode = false;
 
@@ -65,6 +66,7 @@ public class ThreadListViewModel extends ViewModel {
         if (Boolean.TRUE.equals(isLoading.getValue())) return;
         // Reset states
         currentPage = 0;
+        consecutiveEmptyPages = 0;
         allThreads.clear();
         existingThreadUrls.clear();
         hasMore.setValue(true);
@@ -84,11 +86,18 @@ public class ThreadListViewModel extends ViewModel {
                 isLoading.setValue(false);
                 
                 if (newThreads == null || newThreads.isEmpty()) {
+                    consecutiveEmptyPages++;
                     if (page == 0) {
                         errorMessage.setValue("無法取得資料或該板塊目前沒有主題");
                     }
-                    hasMore.setValue(false);
+                    if (consecutiveEmptyPages >= 3) {
+                        hasMore.setValue(false);
+                    } else {
+                        // Keep trying next page if previous were also empty
+                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> loadMore(), 500);
+                    }
                 } else {
+                    consecutiveEmptyPages = 0; // Reset counter on success
                     currentPage = page;
                     List<Thread> uniqueThreads = new ArrayList<>();
                     for (Thread thread : newThreads) {
@@ -103,11 +112,6 @@ public class ThreadListViewModel extends ViewModel {
                         if (!isRemoteSearchMode) {
                             applyFiltersAndSort();
                         }
-                    } else if (page < 10) {
-                        // Delay loading next page to give UI a chance to update and avoid recursion
-                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-                            loadMore();
-                        }, 200);
                     }
                 }
                 

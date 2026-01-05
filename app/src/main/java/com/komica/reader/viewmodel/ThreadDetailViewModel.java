@@ -14,11 +14,32 @@ public class ThreadDetailViewModel extends ViewModel {
     private final MutableLiveData<Thread> threadDetail = new MutableLiveData<>();
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
     private final MutableLiveData<String> errorMessage = new MutableLiveData<>();
+    private final androidx.lifecycle.Observer<Thread> threadObserver;
+    private LiveData<Thread> source;
 
     public ThreadDetailViewModel(Application application, Thread thread) {
         this.initialThread = thread;
         this.repository = KomicaRepository.getInstance(application);
+        this.threadObserver = new androidx.lifecycle.Observer<Thread>() {
+            @Override
+            public void onChanged(Thread thread) {
+                isLoading.setValue(false);
+                if (thread != null) {
+                    threadDetail.setValue(thread);
+                } else {
+                    errorMessage.setValue("載入討論串失敗");
+                }
+            }
+        };
         loadThreadDetail(false);
+    }
+
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        if (source != null) {
+            source.removeObserver(threadObserver);
+        }
     }
 
     public LiveData<Thread> getThreadDetail() {
@@ -39,18 +60,10 @@ public class ThreadDetailViewModel extends ViewModel {
 
     private void loadThreadDetail(boolean forceRefresh) {
         isLoading.setValue(true);
-        LiveData<Thread> source = repository.fetchThreadDetail(initialThread.getUrl(), forceRefresh);
-        source.observeForever(new androidx.lifecycle.Observer<Thread>() {
-            @Override
-            public void onChanged(Thread thread) {
-                source.removeObserver(this);
-                isLoading.setValue(false);
-                if (thread != null) {
-                    threadDetail.setValue(thread);
-                } else {
-                    errorMessage.setValue("載入討論串失敗");
-                }
-            }
-        });
+        if (source != null) {
+            source.removeObserver(threadObserver);
+        }
+        source = repository.fetchThreadDetail(initialThread.getUrl(), forceRefresh);
+        source.observeForever(threadObserver);
     }
 }
