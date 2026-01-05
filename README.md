@@ -40,22 +40,23 @@ Komica Reader 是一款專為瀏覽 Komica 匿名討論板設計的 Android 應�
 
 ## 更新日誌
 
-### V1.26.0105 (2026-01-05) - 核心修復與優化
+### V1.26.0105 (2026-01-05) - 核心修復與架構升級
+- **架構升級 (Architecture Upgrade)**:
+    - **Kotlin 遷移**: 全面導入 Kotlin 支援。Repository 與所有 ViewModel 已由 Java 遷移至 Kotlin，提升開發效率與程式碼安全性。
+    - **Coroutines & Flow**: 引入 Kotlin Coroutines 處理非同步任務。捨棄舊有的 `ExecutorService` 模式，讓非同步邏輯更簡潔且易於維護。
+    - **解析邏輯分離**: 實作 `KomicaParser` 並將 HTML 解析邏輯從 `KomicaService` 中抽離，落實單一職責原則並新增單元測試確保解析穩定性。
 - **穩定性與效能 (Stability & Performance)**:
     - **修復記憶體洩漏**: 
-        - 修正了 ViewModel 中 `observeForever` 導致的洩漏，現在會追蹤並在 `onCleared` 中自動移除。
-        - 優化了 `PostAdapter` 的 `Handler/Runnable` 清理機制，新增 `onViewRecycled` 確保資源釋放。
-    - **架構優化**: 
-        - 將 `ThreadListViewModel` 升級為 `AndroidViewModel` 以便取得 Context 進行資源存取。
-        - 統一全域日誌管理，將 `android.util.Log` 替換為封裝好的 `KLog`。
+        - 修正了 ViewModel 中 `observeForever` 導致的洩漏，改用協程與 Lifecycle-aware 方式管理。
+        - 優化了 `PostAdapter` 的資源釋放機制。
+    - **全域優化**: 統一採用 `KLog` 管理日誌，並修正 JVM Target 相容性問題。
 - **介面與體驗 (UI/UX)**:
-    - **字串資源化**: 將 UI 顯示的硬編碼字串移至 `strings.xml`，支援更好的維護與錯誤提示。
-    - **懸浮按鈕 (FAB)**: 詳情頁改用右下角懸浮按鈕進行操作，釋放閱讀空間。
-    - **標題列優化**: 標題整合至頂部 Toolbar 並固定顯示，全域標題高度縮小為 48dp。
-    - **視覺美化**: 統一討論串內文卡片樣式，優化深色模式對比度。
+    - **字串資源化**: 移除 UI 硬編碼字串。
+    - **懸浮按鈕 (FAB)**: 詳情頁操作優化。
+    - **視覺美化**: 統一討論串卡片樣式與標題列高度。
 - **功能調整**:
-    - **字體大小設定**: 支援獨立調整列表與內文的文字大小，並提供即時預覽。
-    - **移除排序**: 統一採用發文時間倒序，符合直覺。
+    - **字體大小設定**: 支援列表與內文獨立調整並即時預覽。
+    - **排序優化**: 統一採用發文時間倒序。
 
 ### V1.26.0104 (2026-01-04) - 搜尋與核心修復
 - **搜尋功能修復**:
