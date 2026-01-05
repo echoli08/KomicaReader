@@ -1,13 +1,14 @@
 package com.komica.reader.viewmodel;
 
 import android.app.Application;
+import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.ViewModel;
 
 import com.komica.reader.model.Board;
 import com.komica.reader.model.Thread;
 import com.komica.reader.repository.KomicaRepository;
+import com.komica.reader.R;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -16,7 +17,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class ThreadListViewModel extends ViewModel {
+public class ThreadListViewModel extends AndroidViewModel {
     private final KomicaRepository repository;
     private final Board board;
     private final MutableLiveData<List<Thread>> displayThreads = new MutableLiveData<>(new ArrayList<>());
@@ -35,6 +36,7 @@ public class ThreadListViewModel extends ViewModel {
     private androidx.lifecycle.Observer<List<Thread>> currentObserver;
 
     public ThreadListViewModel(Application application, Board board) {
+        super(application);
         this.board = board;
         this.repository = KomicaRepository.getInstance(application);
         loadThreads(0);
@@ -107,7 +109,7 @@ public class ThreadListViewModel extends ViewModel {
                 if (newThreads == null || newThreads.isEmpty()) {
                     consecutiveEmptyPages++;
                     if (page == 0) {
-                        errorMessage.setValue("無法取得資料或該板塊目前沒有主題");
+                        errorMessage.setValue(getApplication().getString(R.string.error_fetch_threads));
                     }
                     if (consecutiveEmptyPages >= 3) {
                         hasMore.setValue(false);
@@ -174,7 +176,7 @@ public class ThreadListViewModel extends ViewModel {
                     displayThreads.setValue(results);
                 } else {
                     displayThreads.setValue(new ArrayList<>());
-                    errorMessage.setValue("找不到符合的搜尋結果");
+                    errorMessage.setValue(getApplication().getString(R.string.error_no_search_results));
                 }
             }
         };

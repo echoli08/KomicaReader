@@ -3,4 +3,18 @@
     <string name="app_name">Komica Reader</string>
     <string name="welcome_message">Welcome to Komica Reader</string>
     <string name="expand">Expand</string>
+    
+    <!-- Error Messages -->
+    <string name="error_fetch_threads">無法取得資料或該板塊目前沒有主題</string>
+    <string name="error_no_search_results">找不到符合的搜尋結果</string>
+    <string name="error_load_thread_failed">載入討論串失敗</string>
+    <string name="error_open_link">無法開啟網址: %1$s</string>
+    
+    <!-- Content Placeholders -->
+    <string name="text_untitled">Untitled</string>
+    <string name="text_anonymous">Anonymous</string>
+    <string name="text_reply_to">回覆於 No. %1$d</string>
+    <string name="text_no_content">(無內容)</string>
+    <string name="text_no_text_content">(無文字內容)</string>
+    <string name="text_unknown_author">Unknown</string>
 </resources>

@@ -163,7 +163,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         widget.getContext().startActivity(intent);
                     } catch (Exception e) {
-                        android.widget.Toast.makeText(widget.getContext(), "無法開啟網址: " + finalUrl, android.widget.Toast.LENGTH_SHORT).show();
+                        android.widget.Toast.makeText(widget.getContext(), widget.getContext().getString(R.string.error_open_link, finalUrl), android.widget.Toast.LENGTH_SHORT).show();
                     }
                 }
 
@@ -226,11 +226,11 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             String author = post.getAuthor();
             
             postNumber.setText("No. " + post.getNumber());
-            postAuthor.setText(author != null ? author : "Unknown");
+            postAuthor.setText(author != null ? author : itemView.getContext().getString(R.string.text_unknown_author));
             postTime.setText(post.getTime() != null ? post.getTime() : "");
 
             if (content == null || content.trim().isEmpty()) {
-                postContent.setText("(無內容)");
+                postContent.setText(itemView.getContext().getString(R.string.text_no_content));
                 postContent.setVisibility(View.GONE);
             } else {
                 SpannableString spannable = createSpannableContent(itemView.getContext(), content);

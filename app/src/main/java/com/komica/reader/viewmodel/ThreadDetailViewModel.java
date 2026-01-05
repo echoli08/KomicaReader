@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel;
 
 import com.komica.reader.model.Thread;
 import com.komica.reader.repository.KomicaRepository;
+import com.komica.reader.R;
 
 public class ThreadDetailViewModel extends ViewModel {
     private final KomicaRepository repository;
@@ -27,7 +28,7 @@ public class ThreadDetailViewModel extends ViewModel {
                 if (thread != null) {
                     threadDetail.setValue(thread);
                 } else {
-                    errorMessage.setValue("載入討論串失敗");
+                    errorMessage.setValue(application.getString(R.string.error_load_thread_failed));
                 }
             }
         };
