@@ -101,7 +101,7 @@
             app:fabSize="mini"
             app:elevation="0dp"
             app:pressedTranslationZ="0dp"
-            app:backgroundTint="?attr/colorAccent"
+            app:backgroundTint="?attr/colorPrimary"
             app:tint="@android:color/white"
             android:contentDescription="分享" />
 

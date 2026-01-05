@@ -7,7 +7,7 @@
     
     <!-- UI Colors (Night) -->
     <color name="window_background">#121212</color>
-    <color name="content_background">#1E1E1E</color>
+    <color name="content_background">#252525</color>
     <color name="header_background">#2C2C2C</color>
     <color name="search_input_background">#2C2C2C</color>
     <color name="button_text_color">#FFFFFF</color>
