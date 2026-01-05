@@ -23,6 +23,8 @@
     <color name="quote_preview_background">#FFF8E1</color>
     <color name="quote_text">#789922</color>
     
+    <color name="fab_background">#FF9800</color>
+
     <!-- Thread List Item Colors -->
     <color name="thread_id_text">#999999</color>
     <color name="thread_title_text">#212121</color>

@@ -101,7 +101,7 @@
             app:fabSize="mini"
             app:elevation="0dp"
             app:pressedTranslationZ="0dp"
-            app:backgroundTint="?attr/colorPrimary"
+            app:backgroundTint="@color/fab_background"
             app:tint="@android:color/white"
             android:contentDescription="分享" />
 
@@ -113,7 +113,7 @@
             app:fabSize="mini"
             app:elevation="0dp"
             app:pressedTranslationZ="0dp"
-            app:backgroundTint="?attr/colorPrimary"
+            app:backgroundTint="@color/fab_background"
             app:tint="@android:color/white"
             android:contentDescription="跳到底部" />
     </LinearLayout>
