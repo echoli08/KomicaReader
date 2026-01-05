@@ -183,6 +183,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         private Handler handler = new Handler(Looper.getMainLooper());
         private Runnable longPressRunnable;
         private boolean isLongPressed = false;
+        private float contentTextSize;
 
         public PostViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -191,6 +192,9 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             postContent = itemView.findViewById(R.id.postContent);
             postTime = itemView.findViewById(R.id.postTime);
             postImage = itemView.findViewById(R.id.postImage);
+
+            android.content.SharedPreferences prefs = itemView.getContext().getSharedPreferences("KomicaReader", android.content.Context.MODE_PRIVATE);
+            contentTextSize = prefs.getFloat("post_font_size", 16f);
 
             itemView.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
                 @Override
@@ -206,6 +210,8 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         }
 
         public void bind(Post post, int position) {
+            postContent.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, contentTextSize);
+            
             String content = post.getContent();
             String author = post.getAuthor();
             

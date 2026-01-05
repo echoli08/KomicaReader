@@ -8,7 +8,7 @@
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="42dp"
+        android:layout_height="?attr/actionBarSize"
         android:background="?attr/colorPrimary"
         android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
         app:contentInsetStartWithNavigation="0dp">
@@ -47,19 +47,6 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:text="篩選"
-            android:textColor="@color/button_text_color"
-            android:background="@drawable/bg_action_button"
-            android:minHeight="0dp"
-            android:minWidth="0dp"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="10dp" />
-
-        <Button
-            android:id="@+id/sortButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="排序"
             android:textColor="@color/button_text_color"
             android:background="@drawable/bg_action_button"
             android:minHeight="0dp"

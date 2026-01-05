@@ -88,6 +88,8 @@ public class ThreadAdapter extends RecyclerView.Adapter<ThreadAdapter.ThreadView
         private TextView lastReplyTime;
         private TextView replyCount;
         private View shareButton;
+        
+        private float titleTextSize;
 
         public ThreadViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -98,9 +100,15 @@ public class ThreadAdapter extends RecyclerView.Adapter<ThreadAdapter.ThreadView
             lastReplyTime = itemView.findViewById(R.id.lastReplyTime);
             replyCount = itemView.findViewById(R.id.replyCount);
             shareButton = itemView.findViewById(R.id.shareButton);
+            
+            // Read preference once per holder creation or bind
+            android.content.SharedPreferences prefs = itemView.getContext().getSharedPreferences("KomicaReader", android.content.Context.MODE_PRIVATE);
+            titleTextSize = prefs.getFloat("theme_font_size", 16f);
         }
 
         public void bind(Thread thread) {
+            threadTitle.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, titleTextSize);
+            
             threadPostNumber.setText("No. " + thread.getPostNumber());
             threadTitle.setText(thread.getTitle());
             threadAuthor.setText(thread.getAuthor());

@@ -28,7 +28,6 @@ public class ThreadListViewModel extends ViewModel {
     
     private int currentPage = 0;
     private String currentSearchQuery = "";
-    private int currentSortMode = 0; // 0: Latest, 1: Last Reply
     private boolean isRemoteSearchMode = false;
 
     public ThreadListViewModel(Application application, Board board) {
@@ -162,35 +161,23 @@ public class ThreadListViewModel extends ViewModel {
         applyFiltersAndSort();
     }
 
-    public void setSortMode(int mode) {
-        this.currentSortMode = mode;
-        applyFiltersAndSort();
-    }
-
     private void applyFiltersAndSort() {
         List<Thread> filtered = new ArrayList<>();
         if (currentSearchQuery.isEmpty()) {
             filtered.addAll(allThreads);
         } else {
             for (Thread t : allThreads) {
-                if (t.getTitle().toLowerCase().contains(currentSearchQuery) ||
-                    t.getContentPreview().toLowerCase().contains(currentSearchQuery)) {
+                String title = t.getTitle() != null ? t.getTitle().toLowerCase() : "";
+                String preview = t.getContentPreview() != null ? t.getContentPreview().toLowerCase() : "";
+                
+                if (title.contains(currentSearchQuery) || preview.contains(currentSearchQuery)) {
                     filtered.add(t);
                 }
             }
         }
 
-        if (currentSortMode == 0) {
-            Collections.sort(filtered, Comparator.comparing(Thread::getPostNumber).reversed());
-        } else {
-            Collections.sort(filtered, (t1, t2) -> {
-                String time1 = t1.getLastReplyTime();
-                String time2 = t2.getLastReplyTime();
-                if (time1 == null || time1.isEmpty()) return 1;
-                if (time2 == null || time2.isEmpty()) return -1;
-                return time2.compareTo(time1);
-            });
-        }
+        // Always sort by Post Number Descending (Newest post first)
+        Collections.sort(filtered, Comparator.comparing(Thread::getPostNumber).reversed());
 
         displayThreads.setValue(filtered);
     }

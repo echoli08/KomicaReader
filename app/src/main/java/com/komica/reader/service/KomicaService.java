@@ -25,6 +25,9 @@ import com.komica.reader.util.KLog;
 public class KomicaService {
     private static final String BASE_URL = "http://komica1.org";
     private static OkHttpClient client = new OkHttpClient.Builder()
+            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
             .followRedirects(true)
             .followSslRedirects(true)
             .addInterceptor(chain -> {
@@ -52,10 +55,11 @@ public class KomicaService {
                     .url(BASE_URL + "/bbsmenu.html")
                     .build();
 
-            Response response = client.newCall(request).execute();
-            String html = response.body().string();
-
-            return parseBoards(html);
+            try (Response response = client.newCall(request).execute()) {
+                if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
+                String html = response.body().string();
+                return parseBoards(html);
+            }
         }
     }
 
@@ -97,12 +101,13 @@ public class KomicaService {
                     .url(url)
                     .build();
 
-            Response response = client.newCall(request).execute();
-            String html = response.body().string();
-
-            android.util.Log.d("Komica", "Threads response length: " + html.length());
-
-            return parseThreads(html, boardUrl);
+            try (Response response = client.newCall(request).execute()) {
+                if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
+                String html = response.body().string();
+                
+                KLog.d("Threads response length: " + html.length());
+                return parseThreads(html, boardUrl);
+            }
         }
     }
 
@@ -121,12 +126,13 @@ public class KomicaService {
                     .url(threadUrl)
                     .build();
 
-            Response response = client.newCall(request).execute();
-            String html = response.body().string();
-
-            android.util.Log.d("Komica", "Thread detail response length: " + html.length());
-
-            return parseThreadDetail(html, threadUrl);
+            try (Response response = client.newCall(request).execute()) {
+                if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
+                String html = response.body().string();
+                
+                KLog.d("Thread detail response length: " + html.length());
+                return parseThreadDetail(html, threadUrl);
+            }
         }
     }
 
@@ -175,19 +181,40 @@ public class KomicaService {
                     .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                     .build();
 
-            Response response = client.newCall(request).execute();
-            byte[] responseBytes = response.body().bytes();
-            
-            // Try auto-detect, then fallback to Big5 if it's Gaia
-            Document doc = Jsoup.parse(new java.io.ByteArrayInputStream(responseBytes), null, baseUrl);
-            String title = doc.title();
-            // Check if title is garbled or if we are on a Gaia board known to be Big5
-            if (isGaia || title.contains("\uFFFD")) {
-                KLog.w("Encoding issue suspected (title garbled or Gaia board), forcing Big5 decoding");
-                doc = Jsoup.parse(new java.io.ByteArrayInputStream(responseBytes), "Big5", baseUrl);
+            try (Response response = client.newCall(request).execute()) {
+                if (!response.isSuccessful() && response.code() != 404) {
+                     // 404 might be a valid state for fallback logic, but others are errors
+                     // However, we want to try fallback anyway if results are empty
+                }
+                
+                byte[] responseBytes = response.body().bytes();
+                
+                // Try auto-detect, then fallback to Big5 if it's Gaia
+                Document doc = Jsoup.parse(new java.io.ByteArrayInputStream(responseBytes), null, baseUrl);
+                String title = doc.title();
+                // Check if title is garbled or if we are on a Gaia board known to be Big5
+                if (isGaia || title.contains("\uFFFD")) {
+                    KLog.w("Encoding issue suspected (title garbled or Gaia board), forcing Big5 decoding");
+                    doc = Jsoup.parse(new java.io.ByteArrayInputStream(responseBytes), "Big5", baseUrl);
+                }
+                
+                List<Thread> results = parseSearchResults(doc, boardUrl);
+                
+                if (results.isEmpty()) {
+                    // Try fallback logic (GET request)
+                    KLog.d("Search results empty via POST, trying GET fallback...");
+                    String getSearchUrl = baseUrl + "pixmicat.php?mode=search&keyword=" + java.net.URLEncoder.encode(query, "UTF-8");
+                    Request fallbackRequest = new Request.Builder().url(getSearchUrl).build();
+                    
+                    try (Response fallbackResponse = client.newCall(fallbackRequest).execute()) {
+                         if (fallbackResponse.isSuccessful()) {
+                             Document fallbackDoc = Jsoup.parse(fallbackResponse.body().byteStream(), null, baseUrl);
+                             results = parseSearchResults(fallbackDoc, boardUrl);
+                         }
+                    }
+                }
+                return results;
             }
-            
-            return parseSearchResults(doc, boardUrl);
         }
     }
 
@@ -208,10 +235,11 @@ public class KomicaService {
                     .url(searchUrl)
                     .build();
 
-            Response response = client.newCall(request).execute();
-            Document doc = Jsoup.parse(response.body().byteStream(), null, BASE_URL);
-
-            return parseSearchResults(doc, BASE_URL);
+            try (Response response = client.newCall(request).execute()) {
+                if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
+                Document doc = Jsoup.parse(response.body().byteStream(), null, BASE_URL);
+                return parseSearchResults(doc, BASE_URL);
+            }
         }
     }
 

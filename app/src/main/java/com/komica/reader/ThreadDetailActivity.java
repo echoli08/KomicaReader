@@ -26,13 +26,15 @@ import com.komica.reader.util.KLog;
 import androidx.lifecycle.ViewModelProvider;
 import java.util.concurrent.Executors;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
 public class ThreadDetailActivity extends AppCompatActivity {
 
     private TextView threadTitle;
     private RecyclerView recyclerView;
     private ProgressBar progressBar;
-    private Button scrollToBottomButton;
-    private Button shareButton;
+    private FloatingActionButton fabScrollDown;
+    private FloatingActionButton fabShare;
     
     private View previewCard;
     private TextView previewTitle;
@@ -66,8 +68,8 @@ public class ThreadDetailActivity extends AppCompatActivity {
         threadTitle = findViewById(R.id.threadTitle);
         recyclerView = findViewById(R.id.recyclerView);
         progressBar = findViewById(R.id.progressBar);
-        scrollToBottomButton = findViewById(R.id.scrollToBottomButton);
-        shareButton = findViewById(R.id.shareButton);
+        fabScrollDown = findViewById(R.id.fabScrollDown);
+        fabShare = findViewById(R.id.fabShare);
         
         previewCard = findViewById(R.id.previewCard);
         previewTitle = findViewById(R.id.previewTitle);
@@ -75,8 +77,8 @@ public class ThreadDetailActivity extends AppCompatActivity {
 
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        scrollToBottomButton.setOnClickListener(v -> scrollToBottom());
-        shareButton.setOnClickListener(v -> shareThread());
+        fabScrollDown.setOnClickListener(v -> scrollToBottom());
+        fabShare.setOnClickListener(v -> shareThread());
 
         threadTitle.setText(currentThread.getTitle());
         
@@ -99,6 +101,14 @@ public class ThreadDetailActivity extends AppCompatActivity {
                 android.widget.Toast.makeText(this, error, android.widget.Toast.LENGTH_LONG).show();
             }
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (adapter != null) {
+            adapter.notifyDataSetChanged();
+        }
     }
 
     private void updateUI(Thread thread) {
@@ -174,12 +184,13 @@ public class ThreadDetailActivity extends AppCompatActivity {
                 android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(this, 
                     getApplicationContext().getPackageName() + ".fileprovider", file);
                     
-                Intent shareIntent = new Intent(Intent.ACTION_SEND);
-                shareIntent.setType("image/*");
-                shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
-                shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                
-                startActivity(Intent.createChooser(shareIntent, "分享圖片"));
+                runOnUiThread(() -> {
+                    Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                    shareIntent.setType("image/*");
+                    shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
+                    shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    startActivity(Intent.createChooser(shareIntent, "分享圖片"));
+                });
             } catch (Exception e) {
                 e.printStackTrace();
                 runOnUiThread(() -> android.widget.Toast.makeText(this, "分享圖片失敗", android.widget.Toast.LENGTH_SHORT).show());

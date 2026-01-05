@@ -8,13 +8,25 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import androidx.appcompat.widget.Toolbar;
 
+import android.content.SharedPreferences;
+import android.widget.TextView;
+
 public class SettingsActivity extends AppCompatActivity {
+
+    private SharedPreferences prefs;
+    private TextView tvListSize;
+    private TextView tvPostSize;
+
+    private static final String[] SIZE_LABELS = {"小", "正常", "大", "特大", "超大"};
+    private static final float[] SIZE_VALUES = {14f, 16f, 18f, 20f, 24f};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
         
+        prefs = getSharedPreferences("KomicaReader", MODE_PRIVATE);
+
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
@@ -22,7 +34,43 @@ public class SettingsActivity extends AppCompatActivity {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }
         
+        tvListSize = findViewById(R.id.tv_font_size_list_value);
+        tvPostSize = findViewById(R.id.tv_font_size_post_value);
+
+        updateLabels();
+
+        findViewById(R.id.btn_font_size_list).setOnClickListener(v -> showSizeDialog("theme_font_size", tvListSize));
+        findViewById(R.id.btn_font_size_post).setOnClickListener(v -> showSizeDialog("post_font_size", tvPostSize));
+        
         findViewById(R.id.btn_about).setOnClickListener(v -> showAboutDialog());
+    }
+
+    private void updateLabels() {
+        float listSize = prefs.getFloat("theme_font_size", 16f);
+        float postSize = prefs.getFloat("post_font_size", 16f);
+        
+        tvListSize.setText(getLabelForSize(listSize));
+        tvPostSize.setText(getLabelForSize(postSize));
+    }
+
+    private String getLabelForSize(float size) {
+        for (int i = 0; i < SIZE_VALUES.length; i++) {
+            if (Math.abs(size - SIZE_VALUES[i]) < 0.1) {
+                return SIZE_LABELS[i] + " (" + (int)size + "sp)";
+            }
+        }
+        return "自訂 (" + size + "sp)";
+    }
+
+    private void showSizeDialog(String key, TextView labelView) {
+        new AlertDialog.Builder(this)
+            .setTitle("選擇字體大小")
+            .setItems(SIZE_LABELS, (dialog, which) -> {
+                float size = SIZE_VALUES[which];
+                prefs.edit().putFloat(key, size).apply();
+                updateLabels();
+            })
+            .show();
     }
     
     private void showAboutDialog() {

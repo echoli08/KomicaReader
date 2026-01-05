@@ -48,7 +48,6 @@ public class ThreadListActivity extends AppCompatActivity {
     private ThreadListViewModel viewModel;
     private Board currentBoard;
     private EditText searchEditText;
-    private Button sortButton;
     private Button filterButton;
     private ImageButton favoriteButton;
     private FavoritesManager favoritesManager;
@@ -83,7 +82,6 @@ public class ThreadListActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
         swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
         searchEditText = findViewById(R.id.searchEditText);
-        sortButton = findViewById(R.id.sortButton);
         filterButton = findViewById(R.id.filterButton);
         favoriteButton = findViewById(R.id.favoriteButton);
 
@@ -110,7 +108,6 @@ public class ThreadListActivity extends AppCompatActivity {
 
         setupScrollListener();
         setupSearchListener();
-        setupSortListener();
         setupFilterButton();
         setupFavoriteListener();
 
@@ -143,6 +140,15 @@ public class ThreadListActivity extends AppCompatActivity {
         com.google.android.material.snackbar.Snackbar.make(recyclerView, message, com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
                 .setAction("重試", v -> viewModel.refresh())
                 .show();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (adapter != null) {
+            // Re-bind views to update font sizes from SharedPreferences
+            adapter.notifyDataSetChanged();
+        }
     }
 
     private void shareThread(Thread thread) {
@@ -236,20 +242,6 @@ public class ThreadListActivity extends AppCompatActivity {
                 }
             }
         });
-    }
-
-    private void setupSortListener() {
-        sortButton.setOnClickListener(v -> showSortDialog());
-    }
-
-    private void showSortDialog() {
-        String[] sortOptions = {"最新發表", "最新回覆時間"};
-        new AlertDialog.Builder(this)
-                .setTitle("選擇排序方式")
-                .setItems(sortOptions, (dialog, which) -> {
-                    viewModel.setSortMode(which);
-                })
-                .show();
     }
 
     @Override
