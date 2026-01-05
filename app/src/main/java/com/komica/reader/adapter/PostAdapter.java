@@ -87,6 +87,12 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         return posts.size();
     }
 
+    @Override
+    public void onViewRecycled(@NonNull PostViewHolder holder) {
+        super.onViewRecycled(holder);
+        holder.cleanup();
+    }
+
     private SpannableString createSpannableContent(android.content.Context context, String content) {
         SpannableString spannable = new SpannableString(content);
         
@@ -202,11 +208,15 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
 
                 @Override
                 public void onViewDetachedFromWindow(@NonNull View v) {
-                    if (longPressRunnable != null) {
-                        handler.removeCallbacks(longPressRunnable);
-                    }
+                    cleanup();
                 }
             });
+        }
+        
+        public void cleanup() {
+            if (longPressRunnable != null) {
+                handler.removeCallbacks(longPressRunnable);
+            }
         }
 
         public void bind(Post post, int position) {
@@ -331,7 +341,9 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                         }
                     }
                 } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
-                    handler.removeCallbacks(longPressRunnable);
+                    if (longPressRunnable != null) {
+                        handler.removeCallbacks(longPressRunnable);
+                    }
                     v.getParent().requestDisallowInterceptTouchEvent(false);
                     
                     if (isLongPressed) {

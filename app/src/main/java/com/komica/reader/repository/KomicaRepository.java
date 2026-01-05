@@ -6,6 +6,7 @@ import android.util.LruCache;
 import com.komica.reader.model.BoardCategory;
 import com.komica.reader.model.Thread;
 import com.komica.reader.service.KomicaService;
+import com.komica.reader.util.KLog;
 
 import java.io.File;
 import java.util.List;
@@ -113,7 +114,7 @@ public class KomicaRepository {
                 List<Thread> result = new KomicaService.FetchThreadsTask(boardUrl, page).call();
                 data.postValue(result != null ? result : new java.util.ArrayList<>());
             } catch (Exception e) {
-                android.util.Log.e("Komica", "Error fetching threads: " + e.getMessage());
+                KLog.e("Error fetching threads: " + e.getMessage());
                 data.postValue(new java.util.ArrayList<>());
             }
         });

@@ -30,11 +30,28 @@ public class ThreadListViewModel extends ViewModel {
     private int consecutiveEmptyPages = 0;
     private String currentSearchQuery = "";
     private boolean isRemoteSearchMode = false;
+    
+    private LiveData<List<Thread>> currentSource;
+    private androidx.lifecycle.Observer<List<Thread>> currentObserver;
 
     public ThreadListViewModel(Application application, Board board) {
         this.board = board;
         this.repository = KomicaRepository.getInstance(application);
         loadThreads(0);
+    }
+
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        detachCurrentObserver();
+    }
+    
+    private void detachCurrentObserver() {
+        if (currentSource != null && currentObserver != null) {
+            currentSource.removeObserver(currentObserver);
+        }
+        currentSource = null;
+        currentObserver = null;
     }
 
     public LiveData<List<Thread>> getThreads() {
@@ -78,11 +95,13 @@ public class ThreadListViewModel extends ViewModel {
         if (Boolean.TRUE.equals(isLoading.getValue())) return;
         
         isLoading.setValue(true);
-        LiveData<List<Thread>> source = repository.fetchThreads(board.getUrl(), page);
-        source.observeForever(new androidx.lifecycle.Observer<List<Thread>>() {
+        detachCurrentObserver();
+        
+        currentSource = repository.fetchThreads(board.getUrl(), page);
+        currentObserver = new androidx.lifecycle.Observer<List<Thread>>() {
             @Override
             public void onChanged(List<Thread> newThreads) {
-                source.removeObserver(this);
+                detachCurrentObserver(); // One-shot
                 isLoading.setValue(false);
                 
                 if (newThreads == null || newThreads.isEmpty()) {
@@ -120,7 +139,8 @@ public class ThreadListViewModel extends ViewModel {
                     applyFiltersAndSort();
                 }
             }
-        });
+        };
+        currentSource.observeForever(currentObserver);
     }
 
     public void setSearchQuery(String query) {
@@ -141,12 +161,14 @@ public class ThreadListViewModel extends ViewModel {
         isLoading.setValue(true);
         isRemoteSearchMode = true;
         hasMore.setValue(false);
+        
+        detachCurrentObserver();
 
-        LiveData<List<Thread>> source = repository.searchThreads(board.getUrl(), currentSearchQuery);
-        source.observeForever(new androidx.lifecycle.Observer<List<Thread>>() {
+        currentSource = repository.searchThreads(board.getUrl(), currentSearchQuery);
+        currentObserver = new androidx.lifecycle.Observer<List<Thread>>() {
             @Override
             public void onChanged(List<Thread> results) {
-                source.removeObserver(this);
+                detachCurrentObserver(); // One-shot
                 isLoading.setValue(false);
                 if (results != null && !results.isEmpty()) {
                     displayThreads.setValue(results);
@@ -155,7 +177,8 @@ public class ThreadListViewModel extends ViewModel {
                     errorMessage.setValue("找不到符合的搜尋結果");
                 }
             }
-        });
+        };
+        currentSource.observeForever(currentObserver);
     }
 
     public void clearSearch() {

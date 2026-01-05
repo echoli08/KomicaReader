@@ -76,7 +76,7 @@ public class KomicaService {
     public List<Thread> call() throws Exception {
         String url = boardUrl;
 
-        android.util.Log.d("Komica", "Original board URL: " + url);
+        KLog.d("Original board URL: " + url);
 
         if (page > 0) {
             if (url.endsWith("index.htm")) {
@@ -95,7 +95,7 @@ public class KomicaService {
             }
         }
 
-        android.util.Log.d("Komica", "Fetching threads from: " + url + " (page " + page + ")");
+        KLog.d("Fetching threads from: " + url + " (page " + page + ")");
 
             Request request = new Request.Builder()
                     .url(url)
@@ -120,7 +120,7 @@ public class KomicaService {
 
         @Override
         public Thread call() throws Exception {
-            android.util.Log.d("Komica", "Fetching thread detail from: " + threadUrl);
+            KLog.d("Fetching thread detail from: " + threadUrl);
 
             Request request = new Request.Builder()
                     .url(threadUrl)
@@ -415,7 +415,7 @@ public class KomicaService {
         String prefix = lastSlash >= 0 ? base.substring(0, lastSlash + 1) : base + "/";
 
         String result = prefix + trimmed;
-        android.util.Log.d("Komica", "Resolved URL: " + href + " -> " + result);
+        KLog.d("Resolved URL: " + href + " -> " + result);
         return result;
     }
 
@@ -523,7 +523,7 @@ public class KomicaService {
                             omittedCount = Integer.parseInt(matcher.group(1));
                         }
                     } catch (Exception e) {
-                        android.util.Log.e("Komica", "Error parsing omitted count: " + e.getMessage());
+                        KLog.e("Error parsing omitted count: " + e.getMessage());
                     }
                 }
                 
@@ -535,18 +535,18 @@ public class KomicaService {
                     Element lastReplyNowElement = lastReply.selectFirst("span.now");
                     if (lastReplyNowElement != null) {
                         lastReplyTime = lastReplyNowElement.text().trim();
-                        android.util.Log.d("Komica", "Found last reply time: " + lastReplyTime);
+                        KLog.d("Found last reply time: " + lastReplyTime);
                     } else {
-                        android.util.Log.d("Komica", "Could not find span.now in last reply");
+                        KLog.d("Could not find span.now in last reply");
                     }
                 } else {
-                    android.util.Log.d("Komica", "No replies found for thread: " + title);
+                    KLog.d("No replies found for thread: " + title);
                 }
             }
 
             if (!title.isEmpty() && !threadUrl.isEmpty()) {
                 String resolvedThreadUrl = resolveUrl(boardUrl, threadUrl);
-                android.util.Log.d("Komica", "Thread " + postNumber + ": " + title + " -> " + resolvedThreadUrl);
+                KLog.d("Thread " + postNumber + ": " + title + " -> " + resolvedThreadUrl);
                 
                 Thread thread = new Thread(
                         String.valueOf(System.currentTimeMillis()) + "-" + i + "-" + (int)(Math.random() * 10000),
@@ -564,7 +564,7 @@ public class KomicaService {
             }
         }
 
-        android.util.Log.d("Komica", "Successfully parsed " + threads.size() + " threads");
+        KLog.d("Successfully parsed " + threads.size() + " threads");
         return threads;
     }
 
@@ -598,7 +598,7 @@ public class KomicaService {
                 Element thumbElement = threadPost.selectFirst("a.file-thumb img.img");
                 if (thumbElement != null) {
                     imageUrl = thumbElement.attr("src");
-                    android.util.Log.d("Komica", "Thread post thumbnail: " + imageUrl);
+                    KLog.d("Thread post thumbnail: " + imageUrl);
                 }
                 
                 Element thumbLinkElement = threadPost.selectFirst("a.file-thumb");
@@ -606,18 +606,18 @@ public class KomicaService {
                     String originalImageUrl = thumbLinkElement.attr("href");
                     if (!originalImageUrl.isEmpty()) {
                         imageUrl = resolveUrl(threadUrl, originalImageUrl);
-                        android.util.Log.d("Komica", "Thread post original image: " + imageUrl);
+                        KLog.d("Thread post original image: " + imageUrl);
                     }
                 }
             }
         }
 
-        android.util.Log.d("Komica", "Thread title: " + title);
+        KLog.d("Thread title: " + title);
 
         List<Post> posts = new ArrayList<>();
 
         Elements allPosts = doc.select("div.post");
-        android.util.Log.d("Komica", "Found " + allPosts.size() + " post elements");
+        KLog.d("Found " + allPosts.size() + " post elements");
 
          for (int i = 0; i < allPosts.size(); i++) {
              Element postElement = allPosts.get(i);
@@ -657,17 +657,17 @@ public class KomicaService {
             Element thumbElement = postElement.selectFirst("a.file-thumb img.img");
             if (thumbElement != null) {
                 postThumbnailUrl = thumbElement.attr("src");
-                android.util.Log.d("Komica", "Found thumbnail: " + postThumbnailUrl);
+                KLog.d("Found thumbnail: " + postThumbnailUrl);
             }
             
             Element thumbLinkElement = postElement.selectFirst("a.file-thumb");
             if (thumbLinkElement != null) {
                 postImageUrl = thumbLinkElement.attr("href");
-                android.util.Log.d("Komica", "Found original image: " + postImageUrl);
+                KLog.d("Found original image: " + postImageUrl);
             }
 
             if (content.length() > 0 || !postImageUrl.isEmpty()) {
-                android.util.Log.d("Komica", "Post " + postNumber + " - Author: " + postAuthor + ", Content length: " + content.length());
+                KLog.d("Post " + postNumber + " - Author: " + postAuthor + ", Content length: " + content.length());
 
                 String postId = String.valueOf(System.currentTimeMillis()) + "-" + posts.size();
                 Post post = new Post(postId, postAuthor, content, resolveUrl(threadUrl, postImageUrl), resolveUrl(threadUrl, postThumbnailUrl), postTime, postNumber);
@@ -675,7 +675,7 @@ public class KomicaService {
             }
         }
 
-        android.util.Log.d("Komica", "Total posts parsed: " + posts.size());
+        KLog.d("Total posts parsed: " + posts.size());
 
         Thread thread = new Thread(
                 String.valueOf(System.currentTimeMillis()),
@@ -687,7 +687,7 @@ public class KomicaService {
         thread.setPosts(posts);
         thread.setImageUrl(resolveUrl(threadUrl, imageUrl));
 
-        android.util.Log.d("Komica", "Parsed thread detail: " + title + ", posts: " + posts.size());
+        KLog.d("Parsed thread detail: " + title + ", posts: " + posts.size());
         return thread;
     }
 
