@@ -271,44 +271,54 @@ public class KomicaService {
                     .build();
 
             try (Response response = client.newCall(request).execute()) {
-                // Read response body
-                String responseBody = response.body().string();
-                KLog.d("Reply response code: " + response.code());
-                // KLog.d("Reply response body: " + responseBody); // Uncomment if needed, but might be large
-
                 // Komica usually returns a 302 Redirect on success.
-                // If 200 OK, it might be a meta-refresh (success) OR an error page.
-                
                 if (response.code() == 302 || response.code() == 303) {
                     KLog.d("Reply success (Redirect)");
                     return true;
                 }
 
+                String responseBody = response.body().string();
+                KLog.d("Reply response code: " + response.code());
+
                 if (response.isSuccessful()) {
-                    // Check for error keywords in the body
+                    // Strict Success Check:
+                    // 1. Meta Refresh to the thread
+                    // 2. "文章送出" or "回應送出" (Success messages)
+                    boolean hasMetaRefresh = responseBody.contains("meta http-equiv=\"refresh\"") && responseBody.contains("pixmicat.php");
+                    boolean hasSuccessText = responseBody.contains("文章送出") || responseBody.contains("回應送出");
+                    
+                    if (hasMetaRefresh || hasSuccessText) {
+                         KLog.d("Reply success (Verified content)");
+                         return true;
+                    }
+
+                    // Check for common error keywords
                     if (responseBody.contains("錯誤") || responseBody.contains("失敗") || responseBody.contains("Error")) {
-                        KLog.w("Reply failed (Error keywords found in body)");
-                        // Try to extract error message
-                        Document doc = Jsoup.parse(responseBody);
-                        String errorText = doc.text();
-                        if (errorText.length() > 100) errorText = errorText.substring(0, 100);
-                        KLog.w("Error details: " + errorText);
+                        KLog.w("Reply failed (Error keywords found)");
+                        logErrorBody(responseBody);
                         return false;
                     }
                     
-                    // Check for success indicators (e.g., meta refresh to the thread)
-                    if (responseBody.contains("meta http-equiv=\"refresh\"") && responseBody.contains("pixmicat.php")) {
-                         KLog.d("Reply success (Meta Refresh found)");
-                         return true;
-                    }
-                    
-                    // If no error found and it's 200 OK, assume success but log warning
-                    KLog.i("Reply returned 200 OK without obvious error. Assuming success.");
-                    return true;
+                    // If neither success nor obvious error, it's likely a challenge page (Cloudflare) or unexpected state.
+                    KLog.w("Reply failed (No success indicator found). Logging preview:");
+                    logErrorBody(responseBody);
+                    return false;
                 }
                 
                 KLog.w("Reply response failed, code: " + response.code());
                 return false;
+            }
+        }
+
+        private void logErrorBody(String body) {
+            try {
+                Document doc = Jsoup.parse(body);
+                String text = doc.text();
+                if (text.length() > 200) text = text.substring(0, 200);
+                KLog.w("Response text preview: " + text);
+            } catch (Exception e) {
+                if (body.length() > 200) KLog.w("Response raw preview: " + body.substring(0, 200));
+                else KLog.w("Response raw preview: " + body);
             }
         }
     }
