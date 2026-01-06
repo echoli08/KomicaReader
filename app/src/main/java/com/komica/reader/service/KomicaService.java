@@ -9,8 +9,12 @@ import okhttp3.MediaType;
 import java.nio.charset.Charset;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.Callable;
 import com.komica.reader.model.BoardCategory;
 import com.komica.reader.model.Thread;
@@ -249,20 +253,71 @@ public class KomicaService {
 
             KLog.d("Send Reply POST URL: " + postUrl + " | Resto: " + resto + " | Charset: " + charsetName);
 
+            Map<String, String> hiddenFields = new HashMap<>();
+
+            // Warm-up and Parse Form to get hidden fields (anti-spam tokens)
+            try {
+                Request warmUpRequest = new Request.Builder()
+                        .url(boardUrl) // Access the thread itself to get the form
+                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                        .build();
+                KLog.d("Warming up and parsing form from: " + boardUrl);
+                
+                try (Response response = client.newCall(warmUpRequest).execute()) {
+                    if (response.isSuccessful()) {
+                        String html = response.body().string();
+                        // Parse with correct charset if possible (Jsoup handles it if Content-Type header is set, otherwise default)
+                        // For Gaia, we might need to force Big5 if Jsoup fails to detect? 
+                        // But Jsoup usually detects meta charset.
+                        Document doc = Jsoup.parse(html, boardUrl);
+                        
+                        // Find the reply form. usually action="pixmicat.php"
+                        Element form = doc.selectFirst("form[action*='pixmicat.php']");
+                        if (form == null) form = doc.selectFirst("form[enctype='multipart/form-data']");
+                        
+                        if (form != null) {
+                            Elements inputs = form.select("input[type=hidden]");
+                            for (Element input : inputs) {
+                                String name = input.attr("name");
+                                String value = input.attr("value");
+                                if (name != null && !name.isEmpty()) {
+                                    hiddenFields.put(name, value);
+                                    KLog.d("Found hidden field: " + name + " = " + value);
+                                }
+                            }
+                        } else {
+                            KLog.w("Could not find reply form in warm-up page");
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                KLog.w("Warm-up/Parse failed: " + e.getMessage());
+            }
+
             MultipartBody.Builder builder = new MultipartBody.Builder()
                     .setType(MultipartBody.FORM);
 
-            // Add fields with correct encoding
-            addStringPart(builder, "mode", "regist", charset);
-            addStringPart(builder, "MAX_FILE_SIZE", "10485760", charset);
-            addStringPart(builder, "noimg", "on", charset); // We are not uploading an image
+            // Add extracted hidden fields first
+            for (Map.Entry<String, String> entry : hiddenFields.entrySet()) {
+                // Skip fields we intend to set explicitly to avoid duplication or stale values
+                String key = entry.getKey();
+                if (key.equals("resto") || key.equals("name") || key.equals("email") || 
+                    key.equals("sub") || key.equals("com") || key.equals("pwd") || key.equals("noimg")) {
+                    continue;
+                }
+                addStringPart(builder, key, entry.getValue(), charset);
+            }
+
+            // Set User Fields
+            if (!hiddenFields.containsKey("mode")) addStringPart(builder, "mode", "regist", charset);
+            
             addStringPart(builder, "resto", String.valueOf(resto), charset);
             addStringPart(builder, "name", name != null ? name : "", charset);
             addStringPart(builder, "email", email != null ? email : "", charset);
             addStringPart(builder, "sub", subject != null ? subject : "", charset);
             addStringPart(builder, "com", comment != null ? comment : "", charset);
             addStringPart(builder, "pwd", "komicareader", charset);
-            addStringPart(builder, "send", "送出", charset); // Required by some scripts
+            addStringPart(builder, "noimg", "on", charset); // Checkbox, usually not hidden
 
             // Add empty file part (Critical for anti-spam checks that expect multipart structure)
             builder.addFormDataPart("upfile", "", RequestBody.create(MediaType.parse("application/octet-stream"), new byte[0]));
@@ -288,20 +343,6 @@ public class KomicaService {
                     .header("Sec-Fetch-Dest", "document")
                     .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                     .build();
-
-            // Warm-up: Visit the board index first to ensure cookies (timerecord, etc.) are set
-            // Some boards only set tracking cookies on the index page.
-            try {
-                Request warmUpRequest = new Request.Builder()
-                        .url(baseUrl)
-                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                        .build();
-                KLog.d("Warming up cookies by visiting: " + baseUrl);
-                client.newCall(warmUpRequest).execute().close(); // We just need headers, so close immediately
-            } catch (Exception e) {
-                KLog.w("Warm-up request failed: " + e.getMessage());
-                // Continue anyway, maybe we have cookies
-            }
 
             try (Response response = client.newCall(request).execute()) {
                 // Komica usually returns a 302 Redirect on success.
