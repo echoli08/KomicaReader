@@ -229,14 +229,21 @@ public class KomicaService {
         private String email;
         private String subject;
         private String comment;
+        private String turnstileToken;
 
-        public SendReplyTask(String boardUrl, int resto, String name, String email, String subject, String comment) {
+        public SendReplyTask(String boardUrl, int resto, String name, String email, String subject, String comment, String turnstileToken) {
             this.boardUrl = boardUrl;
             this.resto = resto;
             this.name = name;
             this.email = email;
             this.subject = subject;
             this.comment = comment;
+            this.turnstileToken = turnstileToken;
+        }
+
+        // Backward compatibility constructor
+        public SendReplyTask(String boardUrl, int resto, String name, String email, String subject, String comment) {
+            this(boardUrl, resto, name, email, subject, comment, null);
         }
 
         @Override
@@ -266,9 +273,6 @@ public class KomicaService {
                 try (Response response = client.newCall(warmUpRequest).execute()) {
                     if (response.isSuccessful()) {
                         String html = response.body().string();
-                        // Parse with correct charset if possible (Jsoup handles it if Content-Type header is set, otherwise default)
-                        // For Gaia, we might need to force Big5 if Jsoup fails to detect? 
-                        // But Jsoup usually detects meta charset.
                         Document doc = Jsoup.parse(html, boardUrl);
                         
                         // Find the reply form. usually action="pixmicat.php"
@@ -318,6 +322,12 @@ public class KomicaService {
             addStringPart(builder, "com", comment != null ? comment : "", charset);
             addStringPart(builder, "pwd", "komicareader", charset);
             addStringPart(builder, "noimg", "on", charset); // Checkbox, usually not hidden
+
+            // Add Turnstile Token if provided
+            if (turnstileToken != null && !turnstileToken.isEmpty()) {
+                addStringPart(builder, "cf-turnstile-response", turnstileToken, charset);
+                KLog.d("Added Turnstile Token: " + turnstileToken.substring(0, Math.min(10, turnstileToken.length())) + "...");
+            }
 
             // Add empty file part (Critical for anti-spam checks that expect multipart structure)
             builder.addFormDataPart("upfile", "", RequestBody.create(MediaType.parse("application/octet-stream"), new byte[0]));
