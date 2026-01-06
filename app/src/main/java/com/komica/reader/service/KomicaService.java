@@ -265,10 +265,23 @@ public class KomicaService {
                 postBytes
             );
 
+            String origin = "https://komica1.org";
+            try {
+                java.net.URL url = new java.net.URL(postUrl);
+                origin = url.getProtocol() + "://" + url.getHost();
+            } catch (Exception e) {
+                // ignore
+            }
+
             Request request = new Request.Builder()
                     .url(postUrl)
                     .post(body)
                     .header("Referer", boardUrl)
+                    .header("Origin", origin)
+                    .header("Sec-Fetch-Site", "same-origin")
+                    .header("Sec-Fetch-Mode", "navigate")
+                    .header("Sec-Fetch-User", "?1")
+                    .header("Sec-Fetch-Dest", "document")
                     .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                     .build();
 
