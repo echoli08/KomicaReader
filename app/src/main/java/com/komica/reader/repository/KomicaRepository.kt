@@ -15,9 +15,12 @@ import okhttp3.Request
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.io.File
 import java.util.concurrent.TimeUnit
+import android.webkit.*
+import kotlinx.coroutines.*
 
 class KomicaRepository private constructor(context: Context) {
 
+    private val appContext = context.applicationContext
     private val threadDetailCache = LruCache<String, Thread>(20)
     private var boardCategoryCache: List<BoardCategory>? = null
 
@@ -115,6 +118,31 @@ class KomicaRepository private constructor(context: Context) {
         fun addCookie(url: okhttp3.HttpUrl, cookie: okhttp3.Cookie) {
             saveFromResponse(url, listOf(cookie))
         }
+
+        @Synchronized
+        fun addRawCookies(url: okhttp3.HttpUrl, cookieString: String?) {
+            if (cookieString == null) return
+            val host = url.host
+            val pairs = cookieString.split(";").map { it.trim() }
+            val cookies = ArrayList<okhttp3.Cookie>()
+            for (pair in pairs) {
+                if (pair.isEmpty()) continue
+                val parts = pair.split("=", limit = 2)
+                if (parts.size == 2) {
+                    val cookie = okhttp3.Cookie.Builder()
+                        .name(parts[0])
+                        .value(parts[1])
+                        .domain(host)
+                        .path("/")
+                        .build()
+                    cookies.add(cookie)
+                }
+            }
+            if (cookies.isNotEmpty()) {
+                KLog.d("CookieJar: Injected ${cookies.size} raw cookies from WebView for $host")
+                saveFromResponse(url, cookies)
+            }
+        }
     }
 
     suspend fun fetchBoards(forceRefresh: Boolean): List<BoardCategory> = withContext(Dispatchers.IO) {
@@ -173,24 +201,106 @@ class KomicaRepository private constructor(context: Context) {
 
     suspend fun sendReply(boardUrl: String, resto: Int, name: String, email: String, subject: String, comment: String): Boolean = withContext(Dispatchers.IO) {
         try {
-            // Inject timerecord cookie to pass spambot check
+            // 1. Try to fetch Turnstile Token (Cloudflare) via WebView on Main thread
+            // This is CRITICAL: it also populates the CookieJar with Cloudflare cookies
+            val turnstileToken = fetchTurnstileToken(boardUrl)
+            
+            // 2. Inject timerecord cookie manually if not already present
             val urlObj = boardUrl.toHttpUrlOrNull()
             if (urlObj != null) {
                 val timerecord = okhttp3.Cookie.Builder()
                     .name("timerecord")
-                    .value((System.currentTimeMillis() / 1000 - 300).toString()) // 5 mins ago
+                    .value((System.currentTimeMillis() / 1000 - 300).toString())
                     .domain(urlObj.host)
                     .path("/")
                     .build()
                 cookieJar.addCookie(urlObj, timerecord)
-                KLog.d("Injected timerecord cookie for ${urlObj.host}")
             }
             
-            KomicaService.SendReplyTask(boardUrl, resto, name, email, subject, comment).call()
+            // 3. Execute reply task with tokens and synced cookies
+            KomicaService.SendReplyTask(boardUrl, resto, name, email, subject, comment, turnstileToken).call()
         } catch (e: Exception) {
             KLog.e("Error sending reply: ${e.message}")
             false
         }
+    }
+
+    private suspend fun fetchTurnstileToken(url: String): String? = withContext(Dispatchers.Main) {
+        KLog.d("WebView: Initializing for Cloudflare verification...")
+        val webView = try {
+            WebView(appContext)
+        } catch (e: Exception) {
+            KLog.e("WebView: Failed to create WebView: ${e.message}")
+            return@withContext null
+        }
+        
+        webView.settings.apply {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            databaseEnabled = true
+            userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+
+        val urlObj = url.toHttpUrlOrNull()
+        
+        webView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, loadedUrl: String?) {
+                super.onPageFinished(view, loadedUrl)
+                KLog.d("WebView: Page finished loading. Syncing cookies...")
+                if (urlObj != null) {
+                    val cookieManager = CookieManager.getInstance()
+                    val cookieStr = cookieManager.getCookie(loadedUrl ?: url)
+                    cookieJar.addRawCookies(urlObj, cookieStr)
+                }
+            }
+        }
+
+        KLog.d("WebView: Loading URL: $url")
+        webView.loadUrl(url)
+
+        // Poll for token every 1.5 seconds, max 20 seconds
+        val result = withTimeoutOrNull(20000) {
+            var token: String? = null
+            for (i in 1..13) {
+                delay(1500)
+                val t = pollTurnstileToken(webView)
+                if (!t.isNullOrEmpty() && t != "null" && t != "undefined") {
+                    token = t
+                    KLog.d("WebView: Token acquired!")
+                    break
+                }
+                
+                // Keep syncing cookies during polling in case CF sets them late
+                if (urlObj != null) {
+                    val cookieStr = CookieManager.getInstance().getCookie(url)
+                    cookieJar.addRawCookies(urlObj, cookieStr)
+                }
+                KLog.d("WebView: Polling Turnstile token ($i/13)...")
+            }
+            token
+        }
+
+        // Final cookie sync before destruction
+        if (urlObj != null) {
+            cookieJar.addRawCookies(urlObj, CookieManager.getInstance().getCookie(url))
+        }
+
+        webView.stopLoading()
+        webView.destroy()
+        result
+    }
+
+    private suspend fun pollTurnstileToken(webView: WebView): String? {
+        val deferred = CompletableDeferred<String?>()
+        webView.evaluateJavascript("(function() { " +
+                "var input = document.getElementsByName('cf-turnstile-response')[0];" +
+                "return input ? input.value : null;" +
+                "})();") { value ->
+            // evaluateJavascript returns JSON wrapped string (e.g. "\"token\"")
+            val cleanValue = value?.trim('\"')
+            deferred.complete(if (cleanValue == "null" || cleanValue == "undefined") null else cleanValue)
+        }
+        return deferred.await()
     }
 
     /**
