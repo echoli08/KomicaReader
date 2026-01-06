@@ -4,6 +4,9 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import okhttp3.MultipartBody;
+import okhttp3.MediaType;
+import java.nio.charset.Charset;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import java.io.IOException;
@@ -241,29 +244,30 @@ public class KomicaService {
 
             String postUrl = baseUrl + "pixmicat.php";
             boolean isGaia = baseUrl.contains("gaia.komica1.org") || baseUrl.contains("sora.komica.org");
-            String charset = isGaia ? "Big5" : "UTF-8";
+            String charsetName = isGaia ? "Big5" : "UTF-8";
+            Charset charset = Charset.forName(charsetName);
 
-            KLog.d("Send Reply POST URL: " + postUrl + " | Resto: " + resto + " | Charset: " + charset);
+            KLog.d("Send Reply POST URL: " + postUrl + " | Resto: " + resto + " | Charset: " + charsetName);
 
-            StringBuilder sb = new StringBuilder();
-            sb.append("mode=regist");
-            sb.append("&MAX_FILE_SIZE=10485760"); // Add standard hidden field
-            sb.append("&noimg=on"); // Add noimg=on
-            sb.append("&resto=").append(resto);
-            sb.append("&name=").append(java.net.URLEncoder.encode(name != null ? name : "", charset));
-            sb.append("&email=").append(java.net.URLEncoder.encode(email != null ? email : "", charset));
-            sb.append("&sub=").append(java.net.URLEncoder.encode(subject != null ? subject : "", charset));
-            sb.append("&com=").append(java.net.URLEncoder.encode(comment != null ? comment : "", charset));
-            sb.append("&pwd=").append(java.net.URLEncoder.encode("komicareader", charset)); // default password
-            // Some boards require the "send" button value
-            sb.append("&send=").append(java.net.URLEncoder.encode("送出", charset));
+            MultipartBody.Builder builder = new MultipartBody.Builder()
+                    .setType(MultipartBody.FORM);
 
-            byte[] postBytes = sb.toString().getBytes();
+            // Add fields with correct encoding
+            addStringPart(builder, "mode", "regist", charset);
+            addStringPart(builder, "MAX_FILE_SIZE", "10485760", charset);
+            addStringPart(builder, "noimg", "on", charset); // We are not uploading an image
+            addStringPart(builder, "resto", String.valueOf(resto), charset);
+            addStringPart(builder, "name", name != null ? name : "", charset);
+            addStringPart(builder, "email", email != null ? email : "", charset);
+            addStringPart(builder, "sub", subject != null ? subject : "", charset);
+            addStringPart(builder, "com", comment != null ? comment : "", charset);
+            addStringPart(builder, "pwd", "komicareader", charset);
+            addStringPart(builder, "send", "送出", charset); // Required by some scripts
 
-            RequestBody body = RequestBody.create(
-                okhttp3.MediaType.parse("application/x-www-form-urlencoded"),
-                postBytes
-            );
+            // Add empty file part (Critical for anti-spam checks that expect multipart structure)
+            builder.addFormDataPart("upfile", "", RequestBody.create(MediaType.parse("application/octet-stream"), new byte[0]));
+
+            RequestBody body = builder.build();
 
             String origin = "https://komica1.org";
             try {
@@ -276,13 +280,12 @@ public class KomicaService {
             Request request = new Request.Builder()
                     .url(postUrl)
                     .post(body)
-                    .header("Referer", boardUrl) // Revert to boardUrl (Thread URL)
+                    .header("Referer", boardUrl)
                     .header("Origin", origin)
                     .header("Sec-Fetch-Site", "same-origin")
                     .header("Sec-Fetch-Mode", "navigate")
                     .header("Sec-Fetch-User", "?1")
                     .header("Sec-Fetch-Dest", "document")
-                    .header("Cookie", "timerecord=" + (System.currentTimeMillis() / 1000L - 60)) // Inject timerecord
                     .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                     .build();
 
@@ -317,7 +320,7 @@ public class KomicaService {
                 }
                 KLog.d("Response Hex: " + hex.toString());
                 
-                String responseBody = new String(responseBytes, charset);
+                String responseBody = new String(responseBytes, charsetName);
                 
                 KLog.d("Reply response code: " + response.code());
 
@@ -349,6 +352,10 @@ public class KomicaService {
                 KLog.w("Reply response failed, code: " + response.code());
                 return false;
             }
+        }
+
+        private void addStringPart(MultipartBody.Builder builder, String name, String value, Charset charset) {
+            builder.addFormDataPart(name, null, RequestBody.create(null, value.getBytes(charset)));
         }
 
         private void logErrorBody(String body) {
