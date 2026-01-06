@@ -247,6 +247,7 @@ public class KomicaService {
 
             StringBuilder sb = new StringBuilder();
             sb.append("mode=regist");
+            sb.append("&MAX_FILE_SIZE=10485760"); // Add standard hidden field
             sb.append("&resto=").append(resto);
             sb.append("&name=").append(java.net.URLEncoder.encode(name != null ? name : "", charset));
             sb.append("&email=").append(java.net.URLEncoder.encode(email != null ? email : "", charset));
@@ -277,7 +278,10 @@ public class KomicaService {
                     return true;
                 }
 
-                String responseBody = response.body().string();
+                // Decode body with correct charset
+                byte[] responseBytes = response.body().bytes();
+                String responseBody = new String(responseBytes, charset);
+                
                 KLog.d("Reply response code: " + response.code());
 
                 if (response.isSuccessful()) {
@@ -293,7 +297,7 @@ public class KomicaService {
                     }
 
                     // Check for common error keywords
-                    if (responseBody.contains("錯誤") || responseBody.contains("失敗") || responseBody.contains("Error")) {
+                    if (responseBody.contains("錯誤") || responseBody.contains("失敗") || responseBody.contains("Error") || responseBody.contains("Spambot")) {
                         KLog.w("Reply failed (Error keywords found)");
                         logErrorBody(responseBody);
                         return false;
