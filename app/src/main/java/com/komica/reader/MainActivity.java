@@ -147,6 +147,10 @@ public class MainActivity extends AppCompatActivity {
             prefs.edit().putBoolean("night_mode", !isNightMode).apply();
             recreate(); // Recreate activity to apply theme
             return true;
+        } else if (item.getItemId() == R.id.action_history) {
+            Intent intent = new Intent(this, HistoryActivity.class);
+            startActivity(intent);
+            return true;
         } else if (item.getItemId() == android.R.id.home) {
             Intent intent = new Intent(this, SettingsActivity.class);
             startActivity(intent);

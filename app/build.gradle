@@ -1,5 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.jetbrains.kotlin.android)
+    id 'kotlin-kapt'
 }
 
 android {
@@ -14,8 +16,8 @@ android {
         applicationId "com.komica.reader"
         minSdk 24
         targetSdk 34
-        versionCode 1260105
-        versionName "1.26.0105"
+        versionCode 1260106
+        versionName "1.26.0106"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -32,12 +34,20 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
     testOptions {
         unitTests.returnDefaultValues = true
     }
 }
 
 dependencies {
+    implementation(libs.kotlin.stdlib)
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.coroutines.android)
+
     implementation(libs.androidx.appcompat)
     implementation(libs.google.material)
     implementation(libs.androidx.constraintlayout)
@@ -47,13 +57,19 @@ dependencies {
     
     implementation(libs.androidx.lifecycle.viewmodel)
     implementation(libs.androidx.lifecycle.livedata)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation "androidx.lifecycle:lifecycle-process:2.7.0"
+
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    kapt(libs.androidx.room.compiler)
     
     implementation(libs.okhttp.core)
     implementation(libs.jsoup.core)
     
     implementation(libs.glide.core)
-    annotationProcessor(libs.glide.compiler)
+    kapt(libs.glide.compiler)
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

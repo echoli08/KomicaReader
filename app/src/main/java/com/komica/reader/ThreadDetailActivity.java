@@ -212,9 +212,23 @@ public class ThreadDetailActivity extends AppCompatActivity {
     }
 
     @Override
+    public boolean onCreateOptionsMenu(android.view.Menu menu) {
+        getMenuInflater().inflate(R.menu.thread_detail_menu, menu);
+        return true;
+    }
+
+    @Override
     public boolean onOptionsItemSelected(android.view.MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
             finish();
+            return true;
+        } else if (item.getItemId() == R.id.action_gallery) {
+            if (currentThread != null) {
+                Intent intent = new Intent(this, GalleryActivity.class);
+                intent.putExtra("thread_url", currentThread.getUrl());
+                intent.putExtra("thread_title", currentThread.getTitle());
+                startActivity(intent);
+            }
             return true;
         }
         return super.onOptionsItemSelected(item);

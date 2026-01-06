@@ -1,5 +1,6 @@
 [versions]
 agp = "8.13.2"
+kotlin = "1.9.22"
 appcompat = "1.6.1"
 material = "1.11.0"
 constraintlayout = "2.1.4"
@@ -10,6 +11,8 @@ okhttp = "4.12.0"
 jsoup = "1.17.2"
 glide = "4.16.0"
 viewpager2 = "1.0.0"
+kotlin-coroutines = "1.7.3"
+room = "2.6.1"
 
 [libraries]
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
@@ -19,6 +22,14 @@ androidx-recyclerview = { group = "androidx.recyclerview", name = "recyclerview"
 androidx-swiperefreshlayout = { group = "androidx.swiperefreshlayout", name = "swiperefreshlayout", version.ref = "swiperefreshlayout" }
 androidx-lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "lifecycle" }
 androidx-lifecycle-livedata = { group = "androidx.lifecycle", name = "lifecycle-livedata", version.ref = "lifecycle" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
+kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlin" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlin-coroutines" }
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlin-coroutines" }
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 okhttp-core = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 jsoup-core = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 glide-core = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
@@ -27,3 +38,4 @@ androidx-viewpager2 = { group = "androidx.viewpager2", name = "viewpager2", vers
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
