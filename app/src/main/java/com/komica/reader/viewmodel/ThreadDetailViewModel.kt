@@ -7,11 +7,13 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.komica.reader.R
 import com.komica.reader.model.Thread
+import com.komica.reader.repository.HistoryRepository
 import com.komica.reader.repository.KomicaRepository
 import kotlinx.coroutines.launch
 
 class ThreadDetailViewModel(application: Application, private val initialThread: Thread) : AndroidViewModel(application) {
     private val repository = KomicaRepository.getInstance(application)
+    private val historyRepository = HistoryRepository.getInstance(application)
     
     private val _threadDetail = MutableLiveData<Thread>()
     val threadDetail: LiveData<Thread> = _threadDetail
@@ -38,6 +40,12 @@ class ThreadDetailViewModel(application: Application, private val initialThread:
                 val result = repository.fetchThreadDetail(initialThread.url, forceRefresh)
                 if (result != null) {
                     _threadDetail.value = result
+                    // Save to history upon successful load
+                    historyRepository.addOrUpdateHistory(
+                        title = result.title ?: "Untitled",
+                        url = result.url,
+                        thumbUrl = result.imageUrl
+                    )
                 } else {
                     _errorMessage.value = getApplication<Application>().getString(R.string.error_load_thread_failed)
                 }

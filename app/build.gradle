@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    id 'kotlin-kapt'
 }
 
 android {
@@ -59,12 +60,16 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation "androidx.lifecycle:lifecycle-process:2.7.0"
+
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    kapt(libs.androidx.room.compiler)
     
     implementation(libs.okhttp.core)
     implementation(libs.jsoup.core)
     
     implementation(libs.glide.core)
-    annotationProcessor(libs.glide.compiler)
+    kapt(libs.glide.compiler)
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

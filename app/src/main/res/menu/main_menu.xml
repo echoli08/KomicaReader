@@ -3,8 +3,13 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_history"
+        android:title="瀏覽紀錄"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_theme_toggle"
-        android:title="切換日夜模式"
+        android:title="切換夜間模式"
         android:icon="@drawable/ic_mode_night"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
 </menu>
