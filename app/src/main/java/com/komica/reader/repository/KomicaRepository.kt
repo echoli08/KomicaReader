@@ -234,6 +234,12 @@ class KomicaRepository private constructor(context: Context) {
             return@withContext null
         }
         
+        val urlObj = url.toHttpUrlOrNull()
+        val boardBaseUrl = url.replace(Regex("pixmicat\\.php.*$"), "")
+
+        // Token storage for JS interface
+        var capturedToken: String? = null
+
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
@@ -241,14 +247,30 @@ class KomicaRepository private constructor(context: Context) {
             userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
 
-        val urlObj = url.toHttpUrlOrNull()
-        val boardBaseUrl = url.replace(Regex("pixmicat\\.php.*$"), "")
-        
+        // Inject a real JS interface to handle the callback reliably
+        webView.addJavascriptInterface(object {
+            @JavascriptInterface
+            fun onTokenCaptured(token: String) {
+                KLog.d("WebView: [Interface] Token captured via callback!")
+                capturedToken = token
+            }
+            @JavascriptInterface
+            fun log(msg: String) {
+                KLog.d("WebView: [JS Log] $msg")
+            }
+        }, "AndroidBridge")
+
         webView.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
                 super.onPageStarted(view, url, favicon)
-                // Pre-inject callback to avoid CF script error
-                view?.evaluateJavascript("window.onloadTurnstileCallback = function() { console.log('Turnstile widget ready'); };", null)
+                // Define the expected callback globally before script runs
+                view?.evaluateJavascript(
+                    "window.onloadTurnstileCallback = function() { " +
+                    "  AndroidBridge.log('Turnstile Callback Triggered'); " +
+                    "  turnstile.render('#turnstile-container', { " +
+                    "    callback: function(token) { AndroidBridge.onTokenCaptured(token); } " +
+                    "  }); " +
+                    "};", null)
             }
 
             override fun onPageFinished(view: WebView?, loadedUrl: String?) {
@@ -258,35 +280,38 @@ class KomicaRepository private constructor(context: Context) {
             }
         }
 
-        // Load with Referer to look more like a real user session
         val extraHeaders = HashMap<String, String>()
         extraHeaders["Referer"] = boardBaseUrl
         
         KLog.d("WebView: Loading URL: $url with Referer: $boardBaseUrl")
         webView.loadUrl(url, extraHeaders)
 
-        // Poll for token every 1.5 seconds, max 20 seconds
+        // Poll for token or interface capture
         val result = withTimeoutOrNull(25000) {
-            var token: String? = null
             for (i in 1..15) {
                 delay(1500)
                 
-                // Sync and check for clearance cookie
-                val hasClearance = syncCookies(url, urlObj)
-                if (hasClearance) {
-                    KLog.d("WebView: [Target Found] cf_clearance cookie acquired!")
+                // 1. Check interface capture
+                if (!capturedToken.isNullOrEmpty()) {
+                    KLog.d("WebView: [Success] Token acquired via interface!")
+                    return@withTimeoutOrNull capturedToken
                 }
 
+                // 2. Fallback: Manual DOM poll
                 val t = pollTurnstileToken(webView)
                 if (!t.isNullOrEmpty() && t != "null" && t != "undefined") {
-                    token = t
-                    KLog.d("WebView: [Success] Turnstile token acquired!")
-                    break
+                    KLog.d("WebView: [Success] Token acquired via DOM poll!")
+                    return@withTimeoutOrNull t
+                }
+                
+                // 3. Sync cookies (looking for cf_clearance)
+                if (syncCookies(url, urlObj)) {
+                    KLog.d("WebView: [Target Found] cf_clearance cookie acquired!")
                 }
                 
                 KLog.d("WebView: Polling verification status ($i/15)...")
             }
-            token
+            null
         }
 
         webView.stopLoading()

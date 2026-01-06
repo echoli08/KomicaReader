@@ -361,7 +361,7 @@ public class KomicaService {
                     return true;
                 }
 
-                // Decode body with correct charset
+                // Decode body with smart encoding detection
                 byte[] responseBytes = response.body().bytes();
                 
                 // Log hex for debugging
@@ -371,7 +371,21 @@ public class KomicaService {
                 }
                 KLog.d("Response Hex: " + hex.toString());
                 
+                // Try decoding with target charset
                 String responseBody = new String(responseBytes, charsetName);
+                
+                // Heuristic: If it's Gaia (Big5) but the result contains replacement chars and 
+                // looks like valid UTF-8, retry with UTF-8.
+                if (isGaia && (responseBody.contains("\uFFFD") || responseBody.contains("Spambot"))) {
+                    try {
+                        String utf8Body = new String(responseBytes, "UTF-8");
+                        // If UTF-8 decoding doesn't have replacement chars, use it.
+                        if (!utf8Body.contains("\uFFFD")) {
+                            responseBody = utf8Body;
+                            KLog.d("Heuristic: Switched to UTF-8 decoding for Gaia response");
+                        }
+                    } catch (Exception e) { /* fallback to original */ }
+                }
                 
                 KLog.d("Reply response code: " + response.code());
 
