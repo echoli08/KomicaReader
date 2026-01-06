@@ -276,12 +276,13 @@ public class KomicaService {
             Request request = new Request.Builder()
                     .url(postUrl)
                     .post(body)
-                    .header("Referer", baseUrl)
+                    .header("Referer", boardUrl) // Revert to boardUrl (Thread URL)
                     .header("Origin", origin)
                     .header("Sec-Fetch-Site", "same-origin")
                     .header("Sec-Fetch-Mode", "navigate")
                     .header("Sec-Fetch-User", "?1")
                     .header("Sec-Fetch-Dest", "document")
+                    .header("Cookie", "timerecord=" + (System.currentTimeMillis() / 1000L - 60)) // Inject timerecord
                     .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                     .build();
 
