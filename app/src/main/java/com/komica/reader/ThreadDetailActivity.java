@@ -34,6 +34,7 @@ public class ThreadDetailActivity extends AppCompatActivity {
     private ProgressBar progressBar;
     private FloatingActionButton fabScrollDown;
     private FloatingActionButton fabShare;
+    private FloatingActionButton fabReply;
     
     private View previewCard;
     private TextView previewTitle;
@@ -83,6 +84,7 @@ public class ThreadDetailActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progressBar);
         fabScrollDown = findViewById(R.id.fabScrollDown);
         fabShare = findViewById(R.id.fabShare);
+        fabReply = findViewById(R.id.fabReply);
         
         previewCard = findViewById(R.id.previewCard);
         previewTitle = findViewById(R.id.previewTitle);
@@ -92,6 +94,7 @@ public class ThreadDetailActivity extends AppCompatActivity {
 
         fabScrollDown.setOnClickListener(v -> scrollToBottom());
         fabShare.setOnClickListener(v -> shareThread());
+        fabReply.setOnClickListener(v -> showReplyDialog());
 
         threadTitle.setText(currentThread.getTitle());
         
@@ -114,6 +117,44 @@ public class ThreadDetailActivity extends AppCompatActivity {
                 android.widget.Toast.makeText(this, error, android.widget.Toast.LENGTH_LONG).show();
             }
         });
+
+        viewModel.getReplyStatus().observe(this, success -> {
+            if (success != null) {
+                if (success) {
+                    android.widget.Toast.makeText(this, "回覆成功", android.widget.Toast.LENGTH_SHORT).show();
+                    scrollToBottom();
+                } else {
+                    android.widget.Toast.makeText(this, "回覆失敗", android.widget.Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+    }
+
+    private void showReplyDialog() {
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        View view = getLayoutInflater().inflate(R.layout.dialog_reply, null);
+        
+        com.google.android.material.textfield.TextInputEditText editContent = view.findViewById(R.id.editContent);
+        Button btnCancel = view.findViewById(R.id.btnCancel);
+        Button btnSend = view.findViewById(R.id.btnSend);
+        
+        builder.setView(view);
+        android.app.AlertDialog dialog = builder.create();
+        
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        
+        btnSend.setOnClickListener(v -> {
+            String content = editContent.getText() != null ? editContent.getText().toString() : "";
+            if (content.trim().isEmpty()) {
+                editContent.setError("內容不能為空");
+                return;
+            }
+            
+            viewModel.sendReply(content);
+            dialog.dismiss();
+        });
+        
+        dialog.show();
     }
 
     @Override

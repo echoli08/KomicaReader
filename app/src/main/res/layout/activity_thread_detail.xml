@@ -93,6 +93,19 @@
         android:gravity="center_horizontal">
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fabReply"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:src="@drawable/ic_reply"
+            app:fabSize="mini"
+            app:elevation="0dp"
+            app:pressedTranslationZ="0dp"
+            app:backgroundTint="@color/fab_background"
+            app:tint="@android:color/white"
+            android:contentDescription="回覆" />
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fabShare"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

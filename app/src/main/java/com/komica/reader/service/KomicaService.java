@@ -215,6 +215,74 @@ public class KomicaService {
         }
     }
 
+    public static class SendReplyTask implements Callable<Boolean> {
+        private String boardUrl;
+        private int resto;
+        private String name;
+        private String email;
+        private String subject;
+        private String comment;
+
+        public SendReplyTask(String boardUrl, int resto, String name, String email, String subject, String comment) {
+            this.boardUrl = boardUrl;
+            this.resto = resto;
+            this.name = name;
+            this.email = email;
+            this.subject = subject;
+            this.comment = comment;
+        }
+
+        @Override
+        public Boolean call() throws Exception {
+            String baseUrl = boardUrl;
+            // Remove filename and query params from boardUrl to get base path
+            baseUrl = baseUrl.replaceAll("(index\\.html?|pixmicat\\.php.*)$", "");
+            if (!baseUrl.endsWith("/")) baseUrl += "/";
+
+            String postUrl = baseUrl + "pixmicat.php";
+            boolean isGaia = baseUrl.contains("gaia.komica1.org") || baseUrl.contains("sora.komica.org");
+            String charset = isGaia ? "Big5" : "UTF-8";
+
+            KLog.d("Send Reply POST URL: " + postUrl + " | Resto: " + resto + " | Charset: " + charset);
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("mode=regist");
+            sb.append("&resto=").append(resto);
+            sb.append("&name=").append(java.net.URLEncoder.encode(name != null ? name : "", charset));
+            sb.append("&email=").append(java.net.URLEncoder.encode(email != null ? email : "", charset));
+            sb.append("&sub=").append(java.net.URLEncoder.encode(subject != null ? subject : "", charset));
+            sb.append("&com=").append(java.net.URLEncoder.encode(comment != null ? comment : "", charset));
+            sb.append("&pwd=").append(java.net.URLEncoder.encode("komicareader", charset)); // default password
+            // Some boards require the "send" button value
+            sb.append("&send=").append(java.net.URLEncoder.encode("送出", charset));
+
+            byte[] postBytes = sb.toString().getBytes();
+
+            RequestBody body = RequestBody.create(
+                okhttp3.MediaType.parse("application/x-www-form-urlencoded"),
+                postBytes
+            );
+
+            Request request = new Request.Builder()
+                    .url(postUrl)
+                    .post(body)
+                    .header("Referer", boardUrl)
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .build();
+
+            try (Response response = client.newCall(request).execute()) {
+                // Komica usually returns a 200 OK with a success message or a redirect (302)
+                // If it's successful or redirect, we consider it a success.
+                if (response.isSuccessful() || response.code() == 302) {
+                    KLog.d("Reply response successful, code: " + response.code());
+                    return true;
+                }
+                KLog.w("Reply response failed, code: " + response.code());
+                return false;
+            }
+        }
+    }
+
     public static String resolveUrl(String baseUrl, String href) {
         return KomicaParser.resolveUrl(baseUrl, href);
     }

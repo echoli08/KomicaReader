@@ -25,12 +25,51 @@ class ThreadDetailViewModel(application: Application, private val initialThread:
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> = _errorMessage
 
+    private val _replyStatus = MutableLiveData<Boolean?>()
+    val replyStatus: LiveData<Boolean?> = _replyStatus
+
     init {
         loadThreadDetail(false)
     }
 
     fun refresh() {
         loadThreadDetail(true)
+    }
+
+    fun sendReply(content: String) {
+        if (content.isBlank()) return
+
+        viewModelScope.launch {
+            _isLoading.value = true
+            _replyStatus.value = null // Reset status
+            try {
+                var resto = initialThread.postNumber
+                // If postNumber is invalid, try to parse from URL
+                if (resto <= 0) {
+                    val m = java.util.regex.Pattern.compile("res=(\\d+)").matcher(initialThread.url)
+                    if (m.find()) {
+                        resto = m.group(1)?.toIntOrNull() ?: 0
+                    }
+                }
+
+                if (resto <= 0) {
+                    _errorMessage.value = "無法取得討論串 ID"
+                    _isLoading.value = false
+                    return@launch
+                }
+
+                val success = repository.sendReply(initialThread.url, resto, "", "", "", content)
+                _replyStatus.value = success
+                if (success) {
+                    refresh()
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "回覆發生錯誤: ${e.message}"
+                _replyStatus.value = false
+            } finally {
+                _isLoading.value = false
+            }
+        }
     }
 
     private fun loadThreadDetail(forceRefresh: Boolean) {

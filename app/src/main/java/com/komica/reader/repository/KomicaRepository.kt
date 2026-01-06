@@ -103,6 +103,15 @@ class KomicaRepository private constructor(context: Context) {
         }
     }
 
+    suspend fun sendReply(boardUrl: String, resto: Int, name: String, email: String, subject: String, comment: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            KomicaService.SendReplyTask(boardUrl, resto, name, email, subject, comment).call()
+        } catch (e: Exception) {
+            KLog.e("Error sending reply: ${e.message}")
+            false
+        }
+    }
+
     /**
      * Compatibility method for Java callers.
      * Uses Dispatchers.IO to run the runnable.

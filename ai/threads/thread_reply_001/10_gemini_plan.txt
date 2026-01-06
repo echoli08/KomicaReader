@@ -1,0 +1,57 @@
+實作方案：Komica Reader 回文功能
+
+1. 資料流 (Data Flow)
+   UI (ThreadDetailActivity/Dialog) -> ThreadDetailViewModel -> KomicaRepository -> KomicaService (SendReplyTask) -> Network (OkHttp)
+
+2. 檔案清單 (File List)
+   - [Modify] app/src/main/java/com/komica/reader/service/KomicaService.java (新增 SendReplyTask，處理 POST 與編碼)
+   - [Modify] app/src/main/java/com/komica/reader/repository/KomicaRepository.java (新增 sendReply 方法，處理執行緒)
+   - [Modify] app/src/main/java/com/komica/reader/viewmodel/ThreadDetailViewModel.java (新增 sendReply 邏輯與 replyStatus LiveData)
+   - [Modify] app/src/main/java/com/komica/reader/ThreadDetailActivity.java (新增回覆按鈕與 Dialog 互動邏輯)
+   - [Modify] app/src/main/res/layout/activity_thread_detail.xml (新增 FloatingActionButton)
+   - [Create] app/src/main/res/layout/dialog_reply.xml (新增回覆輸入框佈局)
+   - [Create] app/src/main/res/drawable/ic_reply.xml (新增回覆圖示)
+
+3. Request 組成
+   - Method: POST
+   - URL: {BoardURL}/pixmicat.php (需解析板面基礎 URL)
+   - Header: Content-Type: application/x-www-form-urlencoded, User-Agent
+   - Body Parameters:
+     - mode: "regist"
+     - resto: {threadId} (討論串編號)
+     - com: {content} (內文)
+     - name: (選填)
+     - email: (選填)
+     - sub: (選填)
+     - pwd: "komicareader" (預設密碼)
+     - send: "送出" (某些舊板面需要此參數觸發)
+   - 編碼處理 (Charset): 
+     - 偵測網域，若為 "gaia.komica1.org" 或 "sora.komica.org" 等舊站，參數需使用 Big5 編碼。
+     - 其他使用 UTF-8。
+
+4. UI 行為
+   - 觸發：在討論串詳情頁點擊「回覆」FAB。
+   - 輸入：彈出 Dialog，包含多行輸入框。
+   - 送出：點擊 Dialog 送出按鈕 -> 鎖定按鈕避免重複發送 -> ViewModel 發送請求。
+   - 成功：
+     1. Toast 顯示「回覆成功」。
+     2. 關閉 Dialog。
+     3. 自動呼叫 `refresh()` 重新載入討論串。
+     4. 載入完成後捲動至底部。
+   - 失敗：
+     1. Toast 顯示「回覆失敗」。
+     2. 保留 Dialog 與使用者輸入內容，允許重試。
+
+5. 最小實作三步驟
+   Step 1 (Core): 實作 KomicaService.SendReplyTask (含編碼邏輯) 與 Repository 串接。
+   Step 2 (State): 實作 ThreadDetailViewModel 的發送邏輯與狀態觀察 (LiveData)。
+   Step 3 (UI): 建立 Dialog Layout、Icon，並在 Activity 中整合 FAB 與 Dialog 邏輯。
+
+6. 執行步驟清單
+   1. 建立 `ic_reply.xml` 與 `dialog_reply.xml` 資源檔。
+   2. 修改 `activity_thread_detail.xml` 加入回覆 FAB。
+   3. 修改 `KomicaService.java` 加入 `SendReplyTask` inner class。
+   4. 修改 `KomicaRepository.java` 加入 `sendReply` 方法。
+   5. 修改 `ThreadDetailViewModel.java` 加入 `sendReply` 方法與 `replyStatus`。
+   6. 修改 `ThreadDetailActivity.java` 實作 FAB 點擊事件、Dialog 顯示與 ViewModel 觀察。
+   7. 編譯並測試功能。
