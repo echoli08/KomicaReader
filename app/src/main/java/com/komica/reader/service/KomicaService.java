@@ -248,6 +248,7 @@ public class KomicaService {
             StringBuilder sb = new StringBuilder();
             sb.append("mode=regist");
             sb.append("&MAX_FILE_SIZE=10485760"); // Add standard hidden field
+            sb.append("&noimg=on"); // Add noimg=on
             sb.append("&resto=").append(resto);
             sb.append("&name=").append(java.net.URLEncoder.encode(name != null ? name : "", charset));
             sb.append("&email=").append(java.net.URLEncoder.encode(email != null ? email : "", charset));
@@ -280,6 +281,14 @@ public class KomicaService {
 
                 // Decode body with correct charset
                 byte[] responseBytes = response.body().bytes();
+                
+                // Log hex for debugging
+                StringBuilder hex = new StringBuilder();
+                for (int i = 0; i < Math.min(32, responseBytes.length); i++) {
+                    hex.append(String.format("%02X ", responseBytes[i]));
+                }
+                KLog.d("Response Hex: " + hex.toString());
+                
                 String responseBody = new String(responseBytes, charset);
                 
                 KLog.d("Reply response code: " + response.code());
