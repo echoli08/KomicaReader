@@ -12,6 +12,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -24,54 +25,17 @@ class KomicaRepository private constructor(context: Context) {
         initOkHttp(context)
     }
 
+    private lateinit var cookieJar: KomicaCookieJar
+
     private fun initOkHttp(context: Context) {
         val cacheDir = File(context.cacheDir, "http_cache")
         val cache = Cache(cacheDir, 10 * 1024 * 1024)
 
+        cookieJar = KomicaCookieJar()
+
         val client = OkHttpClient.Builder()
             .cache(cache)
-            .cookieJar(object : okhttp3.CookieJar {
-                private val cookieStore = HashMap<String, MutableList<okhttp3.Cookie>>()
-
-                @Synchronized
-                override fun saveFromResponse(url: okhttp3.HttpUrl, cookies: List<okhttp3.Cookie>) {
-                    val host = url.host
-                    val currentCookies = cookieStore[host] ?: ArrayList()
-                    
-                    for (newCookie in cookies) {
-                        // Remove existing cookie with the same name
-                        val it = currentCookies.iterator()
-                        while (it.hasNext()) {
-                            val current = it.next()
-                            if (current.name == newCookie.name) {
-                                it.remove()
-                            }
-                        }
-                        currentCookies.add(newCookie)
-                    }
-                    cookieStore[host] = currentCookies
-                }
-
-                @Synchronized
-                override fun loadForRequest(url: okhttp3.HttpUrl): List<okhttp3.Cookie> {
-                    val host = url.host
-                    val cookies = cookieStore[host] ?: return emptyList()
-                    
-                    // Filter expired cookies
-                    val validCookies = ArrayList<okhttp3.Cookie>()
-                    val it = cookies.iterator()
-                    val now = System.currentTimeMillis()
-                    while (it.hasNext()) {
-                        val current = it.next()
-                        if (current.expiresAt > now) {
-                            validCookies.add(current)
-                        } else {
-                            it.remove()
-                        }
-                    }
-                    return validCookies
-                }
-            })
+            .cookieJar(cookieJar)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .writeTimeout(15, TimeUnit.SECONDS)
@@ -89,6 +53,68 @@ class KomicaRepository private constructor(context: Context) {
             .build()
 
         KomicaService.setClient(client)
+    }
+
+    private class KomicaCookieJar : okhttp3.CookieJar {
+        private val cookieStore = HashMap<String, MutableList<okhttp3.Cookie>>()
+
+        @Synchronized
+        override fun saveFromResponse(url: okhttp3.HttpUrl, cookies: List<okhttp3.Cookie>) {
+            val host = url.host
+            val currentCookies = cookieStore[host] ?: ArrayList()
+            
+            KLog.d("CookieJar: Saving ${cookies.size} cookies for $host")
+            for (c in cookies) {
+                KLog.d("CookieJar: + ${c.name}")
+            }
+            
+            for (newCookie in cookies) {
+                // Remove existing cookie with the same name
+                val it = currentCookies.iterator()
+                while (it.hasNext()) {
+                    val current = it.next()
+                    if (current.name == newCookie.name) {
+                        it.remove()
+                    }
+                }
+                currentCookies.add(newCookie)
+            }
+            cookieStore[host] = currentCookies
+        }
+
+        @Synchronized
+        override fun loadForRequest(url: okhttp3.HttpUrl): List<okhttp3.Cookie> {
+            val host = url.host
+            val cookies = cookieStore[host] ?: return emptyList()
+            
+            // Filter expired cookies
+            val validCookies = ArrayList<okhttp3.Cookie>()
+            val it = cookies.iterator()
+            val now = System.currentTimeMillis()
+            while (it.hasNext()) {
+                val current = it.next()
+                if (current.expiresAt > now) {
+                    validCookies.add(current)
+                } else {
+                    it.remove()
+                }
+            }
+            
+            KLog.d("CookieJar: Loading ${validCookies.size} cookies for $host")
+            if (validCookies.isNotEmpty()) {
+                for (c in validCookies) {
+                    KLog.d("CookieJar: -> ${c.name}")
+                }
+            } else {
+                KLog.w("CookieJar: No cookies found for $host!")
+            }
+            
+            return validCookies
+        }
+
+        fun addCookie(url: okhttp3.HttpUrl, cookie: okhttp3.Cookie) {
+            saveFromResponse(url, listOf(cookie))
+        }
     }
 
     suspend fun fetchBoards(forceRefresh: Boolean): List<BoardCategory> = withContext(Dispatchers.IO) {
@@ -147,6 +173,19 @@ class KomicaRepository private constructor(context: Context) {
 
     suspend fun sendReply(boardUrl: String, resto: Int, name: String, email: String, subject: String, comment: String): Boolean = withContext(Dispatchers.IO) {
         try {
+            // Inject timerecord cookie to pass spambot check
+            val urlObj = boardUrl.toHttpUrlOrNull()
+            if (urlObj != null) {
+                val timerecord = okhttp3.Cookie.Builder()
+                    .name("timerecord")
+                    .value((System.currentTimeMillis() / 1000 - 300).toString()) // 5 mins ago
+                    .domain(urlObj.host)
+                    .path("/")
+                    .build()
+                cookieJar.addCookie(urlObj, timerecord)
+                KLog.d("Injected timerecord cookie for ${urlObj.host}")
+            }
+            
             KomicaService.SendReplyTask(boardUrl, resto, name, email, subject, comment).call()
         } catch (e: Exception) {
             KLog.e("Error sending reply: ${e.message}")
