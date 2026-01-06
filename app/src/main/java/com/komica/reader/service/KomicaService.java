@@ -271,12 +271,42 @@ public class KomicaService {
                     .build();
 
             try (Response response = client.newCall(request).execute()) {
-                // Komica usually returns a 200 OK with a success message or a redirect (302)
-                // If it's successful or redirect, we consider it a success.
-                if (response.isSuccessful() || response.code() == 302) {
-                    KLog.d("Reply response successful, code: " + response.code());
+                // Read response body
+                String responseBody = response.body().string();
+                KLog.d("Reply response code: " + response.code());
+                // KLog.d("Reply response body: " + responseBody); // Uncomment if needed, but might be large
+
+                // Komica usually returns a 302 Redirect on success.
+                // If 200 OK, it might be a meta-refresh (success) OR an error page.
+                
+                if (response.code() == 302 || response.code() == 303) {
+                    KLog.d("Reply success (Redirect)");
                     return true;
                 }
+
+                if (response.isSuccessful()) {
+                    // Check for error keywords in the body
+                    if (responseBody.contains("錯誤") || responseBody.contains("失敗") || responseBody.contains("Error")) {
+                        KLog.w("Reply failed (Error keywords found in body)");
+                        // Try to extract error message
+                        Document doc = Jsoup.parse(responseBody);
+                        String errorText = doc.text();
+                        if (errorText.length() > 100) errorText = errorText.substring(0, 100);
+                        KLog.w("Error details: " + errorText);
+                        return false;
+                    }
+                    
+                    // Check for success indicators (e.g., meta refresh to the thread)
+                    if (responseBody.contains("meta http-equiv=\"refresh\"") && responseBody.contains("pixmicat.php")) {
+                         KLog.d("Reply success (Meta Refresh found)");
+                         return true;
+                    }
+                    
+                    // If no error found and it's 200 OK, assume success but log warning
+                    KLog.i("Reply returned 200 OK without obvious error. Assuming success.");
+                    return true;
+                }
+                
                 KLog.w("Reply response failed, code: " + response.code());
                 return false;
             }

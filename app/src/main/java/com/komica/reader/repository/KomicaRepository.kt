@@ -30,6 +30,19 @@ class KomicaRepository private constructor(context: Context) {
 
         val client = OkHttpClient.Builder()
             .cache(cache)
+            .cookieJar(object : okhttp3.CookieJar {
+                private val cookieStore = HashMap<String, List<okhttp3.Cookie>>()
+
+                override fun saveFromResponse(url: okhttp3.HttpUrl, cookies: List<okhttp3.Cookie>) {
+                    if (cookies.isNotEmpty()) {
+                        cookieStore[url.host] = cookies
+                    }
+                }
+
+                override fun loadForRequest(url: okhttp3.HttpUrl): List<okhttp3.Cookie> {
+                    return cookieStore[url.host] ?: emptyList()
+                }
+            })
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .writeTimeout(15, TimeUnit.SECONDS)
