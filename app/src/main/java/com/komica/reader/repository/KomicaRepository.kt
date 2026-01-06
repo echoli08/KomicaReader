@@ -242,52 +242,64 @@ class KomicaRepository private constructor(context: Context) {
         }
 
         val urlObj = url.toHttpUrlOrNull()
+        val boardBaseUrl = url.replace(Regex("pixmicat\\.php.*$"), "")
         
         webView.webViewClient = object : WebViewClient() {
+            override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                super.onPageStarted(view, url, favicon)
+                // Pre-inject callback to avoid CF script error
+                view?.evaluateJavascript("window.onloadTurnstileCallback = function() { console.log('Turnstile widget ready'); };", null)
+            }
+
             override fun onPageFinished(view: WebView?, loadedUrl: String?) {
                 super.onPageFinished(view, loadedUrl)
                 KLog.d("WebView: Page finished loading. Syncing cookies...")
-                if (urlObj != null) {
-                    val cookieManager = CookieManager.getInstance()
-                    val cookieStr = cookieManager.getCookie(loadedUrl ?: url)
-                    cookieJar.addRawCookies(urlObj, cookieStr)
-                }
+                syncCookies(loadedUrl ?: url, urlObj)
             }
         }
 
-        KLog.d("WebView: Loading URL: $url")
-        webView.loadUrl(url)
+        // Load with Referer to look more like a real user session
+        val extraHeaders = HashMap<String, String>()
+        extraHeaders["Referer"] = boardBaseUrl
+        
+        KLog.d("WebView: Loading URL: $url with Referer: $boardBaseUrl")
+        webView.loadUrl(url, extraHeaders)
 
         // Poll for token every 1.5 seconds, max 20 seconds
-        val result = withTimeoutOrNull(20000) {
+        val result = withTimeoutOrNull(25000) {
             var token: String? = null
-            for (i in 1..13) {
+            for (i in 1..15) {
                 delay(1500)
+                
+                // Sync and check for clearance cookie
+                val hasClearance = syncCookies(url, urlObj)
+                if (hasClearance) {
+                    KLog.d("WebView: [Target Found] cf_clearance cookie acquired!")
+                }
+
                 val t = pollTurnstileToken(webView)
                 if (!t.isNullOrEmpty() && t != "null" && t != "undefined") {
                     token = t
-                    KLog.d("WebView: Token acquired!")
+                    KLog.d("WebView: [Success] Turnstile token acquired!")
                     break
                 }
                 
-                // Keep syncing cookies during polling in case CF sets them late
-                if (urlObj != null) {
-                    val cookieStr = CookieManager.getInstance().getCookie(url)
-                    cookieJar.addRawCookies(urlObj, cookieStr)
-                }
-                KLog.d("WebView: Polling Turnstile token ($i/13)...")
+                KLog.d("WebView: Polling verification status ($i/15)...")
             }
             token
-        }
-
-        // Final cookie sync before destruction
-        if (urlObj != null) {
-            cookieJar.addRawCookies(urlObj, CookieManager.getInstance().getCookie(url))
         }
 
         webView.stopLoading()
         webView.destroy()
         result
+    }
+
+    private fun syncCookies(url: String, urlObj: okhttp3.HttpUrl?): Boolean {
+        if (urlObj == null) return false
+        val cookieManager = CookieManager.getInstance()
+        val cookieStr = cookieManager.getCookie(url)
+        cookieJar.addRawCookies(urlObj, cookieStr)
+        return cookieStr?.contains("cf_clearance") == true
     }
 
     private suspend fun pollTurnstileToken(webView: WebView): String? {
