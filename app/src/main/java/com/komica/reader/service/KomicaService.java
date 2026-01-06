@@ -276,7 +276,7 @@ public class KomicaService {
             Request request = new Request.Builder()
                     .url(postUrl)
                     .post(body)
-                    .header("Referer", boardUrl)
+                    .header("Referer", baseUrl)
                     .header("Origin", origin)
                     .header("Sec-Fetch-Site", "same-origin")
                     .header("Sec-Fetch-Mode", "navigate")
@@ -284,6 +284,20 @@ public class KomicaService {
                     .header("Sec-Fetch-Dest", "document")
                     .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                     .build();
+
+            // Warm-up: Visit the board index first to ensure cookies (timerecord, etc.) are set
+            // Some boards only set tracking cookies on the index page.
+            try {
+                Request warmUpRequest = new Request.Builder()
+                        .url(baseUrl)
+                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                        .build();
+                KLog.d("Warming up cookies by visiting: " + baseUrl);
+                client.newCall(warmUpRequest).execute().close(); // We just need headers, so close immediately
+            } catch (Exception e) {
+                KLog.w("Warm-up request failed: " + e.getMessage());
+                // Continue anyway, maybe we have cookies
+            }
 
             try (Response response = client.newCall(request).execute()) {
                 // Komica usually returns a 302 Redirect on success.
