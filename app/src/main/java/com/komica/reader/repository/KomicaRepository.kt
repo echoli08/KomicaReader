@@ -31,16 +31,45 @@ class KomicaRepository private constructor(context: Context) {
         val client = OkHttpClient.Builder()
             .cache(cache)
             .cookieJar(object : okhttp3.CookieJar {
-                private val cookieStore = HashMap<String, List<okhttp3.Cookie>>()
+                private val cookieStore = HashMap<String, MutableList<okhttp3.Cookie>>()
 
+                @Synchronized
                 override fun saveFromResponse(url: okhttp3.HttpUrl, cookies: List<okhttp3.Cookie>) {
-                    if (cookies.isNotEmpty()) {
-                        cookieStore[url.host] = cookies
+                    val host = url.host
+                    val currentCookies = cookieStore[host] ?: ArrayList()
+                    
+                    for (newCookie in cookies) {
+                        // Remove existing cookie with the same name
+                        val it = currentCookies.iterator()
+                        while (it.hasNext()) {
+                            val current = it.next()
+                            if (current.name == newCookie.name) {
+                                it.remove()
+                            }
+                        }
+                        currentCookies.add(newCookie)
                     }
+                    cookieStore[host] = currentCookies
                 }
 
+                @Synchronized
                 override fun loadForRequest(url: okhttp3.HttpUrl): List<okhttp3.Cookie> {
-                    return cookieStore[url.host] ?: emptyList()
+                    val host = url.host
+                    val cookies = cookieStore[host] ?: return emptyList()
+                    
+                    // Filter expired cookies
+                    val validCookies = ArrayList<okhttp3.Cookie>()
+                    val it = cookies.iterator()
+                    val now = System.currentTimeMillis()
+                    while (it.hasNext()) {
+                        val current = it.next()
+                        if (current.expiresAt > now) {
+                            validCookies.add(current)
+                        } else {
+                            it.remove()
+                        }
+                    }
+                    return validCookies
                 }
             })
             .connectTimeout(15, TimeUnit.SECONDS)
