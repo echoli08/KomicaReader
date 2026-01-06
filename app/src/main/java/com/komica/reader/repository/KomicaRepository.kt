@@ -263,13 +263,29 @@ class KomicaRepository private constructor(context: Context) {
         webView.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
                 super.onPageStarted(view, url, favicon)
-                // Define the expected callback globally before script runs
+                // Define the expected callback globally and handle dynamic rendering
                 view?.evaluateJavascript(
                     "window.onloadTurnstileCallback = function() { " +
-                    "  AndroidBridge.log('Turnstile Callback Triggered'); " +
-                    "  turnstile.render('#turnstile-container', { " +
-                    "    callback: function(token) { AndroidBridge.onTokenCaptured(token); } " +
-                    "  }); " +
+                    "  AndroidBridge.log('Turnstile API Ready'); " +
+                    "  var checkBody = setInterval(function() { " +
+                    "    if (document.body) { " +
+                    "      clearInterval(checkBody); " +
+                    "      var container = document.getElementById('turnstile-container'); " +
+                    "      if (!container) { " +
+                    "        container = document.createElement('div'); " +
+                    "        container.id = 'turnstile-container'; " +
+                    "        document.body.appendChild(container); " +
+                    "      } " +
+                    "      var sitekey = '0x4AAAAAAAHoSO1c88LfQItS'; " + // Default sitekey
+                    "      var existing = document.querySelector('[data-sitekey]'); " +
+                    "      if (existing) sitekey = existing.dataset.sitekey; " +
+                    "      AndroidBridge.log('Rendering Turnstile with key: ' + sitekey); " +
+                    "      turnstile.render(container, { " +
+                    "        sitekey: sitekey, " +
+                    "        callback: function(token) { AndroidBridge.onTokenCaptured(token); } " +
+                    "      }); " +
+                    "    } " +
+                    "  }, 100); " +
                     "};", null)
             }
 
