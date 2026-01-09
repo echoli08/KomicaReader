@@ -167,17 +167,12 @@ class ThreadDetailActivity : AppCompatActivity() {
         KLog.d("Turnstile verification URL: $formUrl")
 
         val dialog = TurnstileDialog(
-            this, formUrl, "", "", "", content,
+            this, formUrl,
             object : TurnstileDialog.Callback {
-                override fun onSuccess() {
-                    // 由於 TurnstileDialog 已在 WebView 中完成送出，此處直接顯示成功並重新整理
-                    // 避免重複呼叫 viewModel.sendReply 導致重複發文或回傳錯誤
-                    Toast.makeText(this@ThreadDetailActivity, R.string.msg_reply_success, Toast.LENGTH_SHORT).show()
-                    viewModel.refresh()
-                }
-
-                override fun onTokenReceived(token: String) {
-                    // Deprecated
+                override fun onVerified(token: String?) {
+                    // 繁體中文註解：統一交由 ViewModel 送出回文，避免 WebView 直接送出
+                    val normalizedToken = token?.takeIf { it.isNotBlank() }
+                    viewModel.sendReply(content, normalizedToken)
                 }
 
                 override fun onCancelled() {
