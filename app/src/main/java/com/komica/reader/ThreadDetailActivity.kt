@@ -62,7 +62,7 @@ class ThreadDetailActivity : AppCompatActivity() {
                 title ?: "Loading...",
                 "",
                 0,
-                url
+                url ?: ""
             )
         }
 
