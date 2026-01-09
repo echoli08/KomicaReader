@@ -38,4 +38,7 @@
     <string name="fmt_post_number">No. %1$d %2$s</string>
     <string name="title_reply_webview">回覆</string>
     <string name="msg_reply_webview_missing_url">回覆網址無效</string>
+    <string name="setting_reply_section">回覆設定</string>
+    <string name="setting_reply_webview_slim">回覆頁資源精簡</string>
+    <string name="setting_reply_webview_slim_desc">阻擋圖片與影音，縮短載入時間（驗證仍會載入）</string>
 </resources>

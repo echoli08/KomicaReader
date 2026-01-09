@@ -2,10 +2,15 @@ package com.komica.reader
 
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.webkit.CookieManager
 import android.view.View
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -13,15 +18,21 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import com.komica.reader.databinding.ActivityReplyWebviewBinding
+import java.io.ByteArrayInputStream
 
 class ReplyWebViewActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityReplyWebviewBinding
+    private lateinit var prefs: SharedPreferences
+    private var isSlimResourcesEnabled = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityReplyWebviewBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        // 繁體中文註解：讀取回覆頁資源精簡設定，預設開啟
+        isSlimResourcesEnabled = prefs.getBoolean(KEY_REPLY_WEBVIEW_SLIM, true)
 
         setSupportActionBar(binding.toolbar)
         supportActionBar?.apply {
@@ -78,6 +89,20 @@ class ReplyWebViewActivity : AppCompatActivity() {
         }
 
         binding.replyWebView.webViewClient = object : WebViewClient() {
+            override fun shouldInterceptRequest(
+                view: WebView,
+                request: WebResourceRequest
+            ): WebResourceResponse? {
+                if (!isSlimResourcesEnabled) return null
+                if (request.isForMainFrame) return null
+                val uri = request.url ?: return null
+                if (shouldBlockResource(uri)) {
+                    // 繁體中文註解：阻擋非必要的大型資源，讓回覆頁面載入更精簡
+                    return createEmptyResponse()
+                }
+                return null
+            }
+
             override fun onPageFinished(view: WebView, url: String) {
                 super.onPageFinished(view, url)
                 // 繁體中文註解：頁面載入後檢查是否已回覆成功或被擋下
@@ -129,8 +154,62 @@ class ReplyWebViewActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
+    private fun shouldBlockResource(uri: Uri): Boolean {
+        val scheme = uri.scheme?.lowercase() ?: return false
+        if (scheme != "http" && scheme != "https") return false
+
+        val host = uri.host?.lowercase() ?: return false
+        if (isCloudflareHost(host)) return false
+
+        val path = (uri.path ?: "").lowercase()
+        val query = (uri.query ?: "").lowercase()
+        if (path.contains("captcha") || query.contains("captcha") ||
+            path.contains("verify") || query.contains("verify")
+        ) {
+            return false
+        }
+
+        val ext = path.substringAfterLast('.', "")
+        if (ext.isEmpty()) return false
+
+        if (BLOCKED_FONT_EXTENSIONS.contains(ext)) return true
+        if (BLOCKED_MEDIA_EXTENSIONS.contains(ext)) return true
+        if (BLOCKED_IMAGE_EXTENSIONS.contains(ext)) return true
+
+        return false
+    }
+
+    private fun isCloudflareHost(host: String): Boolean {
+        return host == "cloudflare.com" ||
+            host.endsWith(".cloudflare.com") ||
+            host.endsWith(".cloudflareinsights.com")
+    }
+
+    private fun createEmptyResponse(): WebResourceResponse {
+        val response = WebResourceResponse(
+            "text/plain",
+            "utf-8",
+            ByteArrayInputStream(ByteArray(0))
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            response.setStatusCodeAndReasonPhrase(204, "No Content")
+        }
+        return response
+    }
+
     companion object {
         private const val EXTRA_FORM_URL = "form_url"
+        private const val PREFS_NAME = "KomicaReader"
+        private const val KEY_REPLY_WEBVIEW_SLIM = "reply_webview_slim"
+        private val BLOCKED_IMAGE_EXTENSIONS = setOf(
+            "jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "ico"
+        )
+        private val BLOCKED_MEDIA_EXTENSIONS = setOf(
+            "mp4", "webm", "mp3", "ogg", "wav", "flac", "m4a"
+        )
+        private val BLOCKED_FONT_EXTENSIONS = setOf(
+            "woff", "woff2", "ttf", "otf", "eot"
+        )
 
         fun createIntent(context: Context, formUrl: String): Intent {
             return Intent(context, ReplyWebViewActivity::class.java).apply {

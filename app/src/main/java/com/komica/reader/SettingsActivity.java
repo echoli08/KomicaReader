@@ -7,6 +7,7 @@ import android.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import androidx.appcompat.widget.Toolbar;
+import androidx.appcompat.widget.SwitchCompat;
 
 import android.content.SharedPreferences;
 import android.widget.TextView;
@@ -16,6 +17,10 @@ public class SettingsActivity extends AppCompatActivity {
     private SharedPreferences prefs;
     private TextView tvListSize;
     private TextView tvPostSize;
+    private SwitchCompat switchReplyWebViewSlim;
+
+    private static final String PREFS_NAME = "KomicaReader";
+    private static final String KEY_REPLY_WEBVIEW_SLIM = "reply_webview_slim";
 
     private static final String[] SIZE_LABELS = {"小", "正常", "大", "特大", "超大"};
     private static final float[] SIZE_VALUES = {14f, 16f, 18f, 20f, 24f};
@@ -25,7 +30,7 @@ public class SettingsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
         
-        prefs = getSharedPreferences("KomicaReader", MODE_PRIVATE);
+        prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -36,11 +41,20 @@ public class SettingsActivity extends AppCompatActivity {
         
         tvListSize = findViewById(R.id.tv_font_size_list_value);
         tvPostSize = findViewById(R.id.tv_font_size_post_value);
+        switchReplyWebViewSlim = findViewById(R.id.switch_reply_webview_slim);
 
         updateLabels();
 
         findViewById(R.id.btn_font_size_list).setOnClickListener(v -> showSizeDialog("theme_font_size", tvListSize));
         findViewById(R.id.btn_font_size_post).setOnClickListener(v -> showSizeDialog("post_font_size", tvPostSize));
+        findViewById(R.id.item_reply_webview_slim).setOnClickListener(v -> switchReplyWebViewSlim.toggle());
+
+        boolean isSlimEnabled = prefs.getBoolean(KEY_REPLY_WEBVIEW_SLIM, true);
+        switchReplyWebViewSlim.setChecked(isSlimEnabled);
+        switchReplyWebViewSlim.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            // 繁體中文註解：儲存回覆頁資源精簡開關
+            prefs.edit().putBoolean(KEY_REPLY_WEBVIEW_SLIM, isChecked).apply();
+        });
         
         findViewById(R.id.btn_about).setOnClickListener(v -> showAboutDialog());
     }

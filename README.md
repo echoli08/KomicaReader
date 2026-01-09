@@ -26,6 +26,7 @@ Komica Reader 是一款專為瀏覽 Komica 匿名討論板設計的 Android 應�
 11. **快取與重新整理**：支援磁碟與記憶體快取，並可透過下拉動作手動重新整理最新內容
 12. **瀏覽紀錄**：自動記錄瀏覽過的討論串，支援從主頁與列表進入回顧，並提供一鍵清除功能
 13. **圖片牆模式**：在討論串詳情中可切換至圖片牆模式，以網格方式快速瀏覽所有圖片
+14. **回覆 WebView**：回覆改採 WebView，並可在設定中開啟「回覆頁資源精簡」加速載入
 
 ## 截圖預覽
 
@@ -51,6 +52,8 @@ Komica Reader 是一款專為瀏覽 Komica 匿名討論板設計的 Android 應�
 - **效能與穩定性 (Performance & Stability)**:
     - **資料庫優化**: 為 Room `history` 資料表加入 `url` 索引，大幅提升高資料量下的查詢效能。
     - **Lifecycle 升級**: `KomicaReaderApplication` 遷移至 `DefaultLifecycleObserver`，符合 Android 最新 API 標準。
+- **回覆體驗 (Reply)**:
+    - **WebView 回覆**: 回覆改用 WebView 手動送出，並新增「回覆頁資源精簡」設定加速載入。
 - **測試 (Testing)**:
     - 建立 `MainViewModelTest` 單元測試，引入 **MockK** 與 **Coroutines Test** 框架，確保核心業務邏輯的穩定性。
 
