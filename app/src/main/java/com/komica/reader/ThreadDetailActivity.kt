@@ -169,12 +169,10 @@ class ThreadDetailActivity : AppCompatActivity() {
                 binding.recyclerView.smoothScrollToPosition(position)
             }
 
-            override fun onQuoteLongClick(post: Post?) {
-                if (post != null) {
-                    binding.previewTitle.text = getString(R.string.fmt_post_number, post.number, post.author ?: "")
-                    binding.previewContent.text = post.content
-                    binding.previewCard.visibility = View.VISIBLE
-                }
+            override fun onQuoteLongClick(post: Post) {
+                binding.previewTitle.text = getString(R.string.fmt_post_number, post.number, post.author)
+                binding.previewContent.text = post.content
+                binding.previewCard.visibility = View.VISIBLE
             }
 
             override fun onQuoteReleased() {
