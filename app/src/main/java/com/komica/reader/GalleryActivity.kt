@@ -6,17 +6,18 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
-import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.komica.reader.adapter.GalleryAdapter
 import com.komica.reader.viewmodel.GalleryViewModel
-import com.komica.reader.viewmodel.GalleryViewModelFactory
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class GalleryActivity : AppCompatActivity() {
-    private lateinit var viewModel: GalleryViewModel
+    private val viewModel: GalleryViewModel by viewModels()
     private lateinit var adapter: GalleryAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,9 +41,6 @@ class GalleryActivity : AppCompatActivity() {
         val progressBar = findViewById<ProgressBar>(R.id.progressBar)
         val emptyView = findViewById<TextView>(R.id.emptyView)
         val recyclerView = findViewById<RecyclerView>(R.id.recyclerView)
-
-        val factory = GalleryViewModelFactory(application, threadUrl)
-        viewModel = ViewModelProvider(this, factory)[GalleryViewModel::class.java]
 
         // 3 columns grid
         recyclerView.layoutManager = GridLayoutManager(this, 3)

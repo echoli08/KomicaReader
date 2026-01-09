@@ -17,4 +17,23 @@
     <string name="text_no_content">(無內容)</string>
     <string name="text_no_text_content">(無文字內容)</string>
     <string name="text_unknown_author">Unknown</string>
+
+    <!-- UI Actions -->
+    <string name="action_switch_day_mode">切換日間模式</string>
+    <string name="action_switch_night_mode">切換夜間模式</string>
+    <string name="action_retry">重試</string>
+    <string name="action_share_thread">分享討論串</string>
+    <string name="action_share_image">分享圖片</string>
+    <string name="action_cancel">已取消</string>
+
+    <!-- Messages -->
+    <string name="msg_loading">Loading...</string>
+    <string name="msg_reply_success">回覆成功</string>
+    <string name="msg_reply_failed">回覆失敗</string>
+    <string name="msg_content_empty">內容不能為空</string>
+    <string name="msg_error_prefix">錯誤: %1$s</string>
+    <string name="msg_share_image_failed">分享圖片失敗</string>
+    
+    <!-- Formats -->
+    <string name="fmt_post_number">No. %1$d %2$s</string>
 </resources>

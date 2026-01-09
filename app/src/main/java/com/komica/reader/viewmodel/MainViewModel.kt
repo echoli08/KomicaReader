@@ -8,13 +8,19 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.komica.reader.model.Board
 import com.komica.reader.model.BoardCategory
+import com.komica.reader.model.Resource
 import com.komica.reader.repository.KomicaRepository
 import com.komica.reader.util.FavoritesManager
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = KomicaRepository.getInstance(application)
-    private val favoritesManager = FavoritesManager.getInstance(application)
+@HiltViewModel
+class MainViewModel @Inject constructor(
+    application: Application,
+    private val repository: KomicaRepository,
+    private val favoritesManager: FavoritesManager
+) : AndroidViewModel(application) {
     
     private val _originalCategories = MutableLiveData<List<BoardCategory>>()
     private val _displayCategories = MediatorLiveData<List<BoardCategory>>()
@@ -36,11 +42,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val result = repository.fetchBoards(forceRefresh)
-                if (result.isNotEmpty()) {
-                    _originalCategories.value = result
-                } else {
-                    _errorMessage.value = "載入板塊失敗"
+                when (val result = repository.fetchBoards(forceRefresh)) {
+                    is Resource.Success -> {
+                        if (result.data.isNotEmpty()) {
+                            _originalCategories.value = result.data
+                        } else {
+                            _errorMessage.value = "載入板塊失敗: 資料為空"
+                        }
+                    }
+                    is Resource.Error -> {
+                        _errorMessage.value = "載入板塊失敗: ${result.exception.message}"
+                    }
+                    else -> {}
                 }
             } catch (e: Exception) {
                 _errorMessage.value = "發生錯誤: ${e.message}"
@@ -64,7 +77,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         val updated = mutableListOf<BoardCategory>()
         
-        // 取得所有最愛看板並去重
         val favoriteBoards = original.flatMap { it.boards }
             .filter { favoritesManager.isFavorite(it.url) }
             .distinctBy { it.url }

@@ -4,17 +4,27 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.komica.reader.R
+import com.komica.reader.model.Resource
 import com.komica.reader.model.Thread
 import com.komica.reader.repository.HistoryRepository
 import com.komica.reader.repository.KomicaRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class ThreadDetailViewModel(application: Application, private val initialThread: Thread) : AndroidViewModel(application) {
-    private val repository = KomicaRepository.getInstance(application)
-    private val historyRepository = HistoryRepository.getInstance(application)
+@HiltViewModel
+class ThreadDetailViewModel @Inject constructor(
+    application: Application,
+    private val repository: KomicaRepository,
+    private val historyRepository: HistoryRepository,
+    savedStateHandle: SavedStateHandle
+) : AndroidViewModel(application) {
     
+    private val initialThread: Thread
+
     private val _threadDetail = MutableLiveData<Thread>()
     val threadDetail: LiveData<Thread> = _threadDetail
 
@@ -29,6 +39,26 @@ class ThreadDetailViewModel(application: Application, private val initialThread:
     val replyStatus: LiveData<Boolean?> = _replyStatus
 
     init {
+        val threadExtra = savedStateHandle.get<Thread>("thread")
+        if (threadExtra != null) {
+            initialThread = threadExtra
+        } else {
+            val url = savedStateHandle.get<String>("thread_url")
+            val title = savedStateHandle.get<String>("thread_title")
+            if (url != null) {
+                initialThread = Thread(
+                    System.currentTimeMillis().toString(),
+                    title ?: "Loading...",
+                    "",
+                    0,
+                    url
+                )
+            } else {
+                // Should not happen if Activity checks intent
+                initialThread = Thread("0", "Error", "", 0, "")
+            }
+        }
+        
         loadThreadDetail(false)
     }
 
@@ -36,7 +66,7 @@ class ThreadDetailViewModel(application: Application, private val initialThread:
         loadThreadDetail(true)
     }
 
-    fun sendReply(content: String) {
+    fun sendReply(content: String, turnstileToken: String?) {
         if (content.isBlank()) return
 
         viewModelScope.launch {
@@ -58,10 +88,18 @@ class ThreadDetailViewModel(application: Application, private val initialThread:
                     return@launch
                 }
 
-                val success = repository.sendReply(initialThread.url, resto, "", "", "", content)
-                _replyStatus.value = success
-                if (success) {
-                    refresh()
+                when (val result = repository.sendReply(initialThread.url, resto, "", "", "", content, turnstileToken)) {
+                    is Resource.Success -> {
+                        _replyStatus.value = result.data
+                        if (result.data) {
+                            refresh()
+                        }
+                    }
+                    is Resource.Error -> {
+                        _errorMessage.value = "回覆發生錯誤: ${result.message}"
+                        _replyStatus.value = false
+                    }
+                    else -> {}
                 }
             } catch (e: Exception) {
                 _errorMessage.value = "回覆發生錯誤: ${e.message}"
@@ -76,17 +114,21 @@ class ThreadDetailViewModel(application: Application, private val initialThread:
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val result = repository.fetchThreadDetail(initialThread.url, forceRefresh)
-                if (result != null) {
-                    _threadDetail.value = result
-                    // Save to history upon successful load
-                    historyRepository.addOrUpdateHistory(
-                        title = result.title ?: "Untitled",
-                        url = result.url,
-                        thumbUrl = result.imageUrl
-                    )
-                } else {
-                    _errorMessage.value = getApplication<Application>().getString(R.string.error_load_thread_failed)
+                when (val result = repository.fetchThreadDetail(initialThread.url, forceRefresh)) {
+                    is Resource.Success -> {
+                        val thread = result.data
+                        _threadDetail.value = thread
+                        // Save to history upon successful load
+                        historyRepository.addOrUpdateHistory(
+                            title = thread.title ?: "Untitled",
+                            url = thread.url,
+                            thumbUrl = thread.imageUrl
+                        )
+                    }
+                    is Resource.Error -> {
+                        _errorMessage.value = result.message ?: getApplication<Application>().getString(R.string.error_load_thread_failed)
+                    }
+                    else -> {}
                 }
             } catch (e: Exception) {
                 _errorMessage.value = "發生錯誤: ${e.message}"

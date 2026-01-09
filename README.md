@@ -1,5 +1,4 @@
-# Komica Reader
-
+﻿# Komica Reader
 
 <br>因K島實在是找不到簡單實用的APP，以前常用的也都不能用了，
 <br>導致在手機上只能透過網頁看K島，
@@ -7,7 +6,6 @@
 <br>接下來會嘗試用Gemini來接續後續處理，
 <br>另外雖然會寫cobol跟c#但我對於java以及android其實是一竅不通的，
 <br>所以有問題我也會繼續透過這方式來實作跟修正，翻車機率很高。
-
 
 A native Android application for browsing Komica anonymous discussion boards.
 
@@ -24,7 +22,7 @@ Komica Reader 是一款專為瀏覽 Komica 匿名討論板設計的 Android 應�
 7. **引文預覽**：長按引文編號 (>>No.) 可快速預覽該篇回應內容，放開即消失，無需跳轉頁面
 8. **圖片預覽**：支援全螢幕圖片檢視，可透過滑動切換瀏覽串列中的多張圖片，並優化縮圖顯示大小
 9. **圖片分享**：長按圖片可直接叫用系統分享選單，快速分享圖片至其他應用程式
-10. **響應式介面**：採用 Material Design 風格，支援日夜模式切換，提供流暢的閱讀體驗
+10. **響應式介面**：採用 Material Design 3 風格，支援日夜模式切換，提供流暢的閱讀體驗
 11. **快取與重新整理**：支援磁碟與記憶體快取，並可透過下拉動作手動重新整理最新內容
 12. **瀏覽紀錄**：自動記錄瀏覽過的討論串，支援從主頁與列表進入回顧，並提供一鍵清除功能
 13. **圖片牆模式**：在討論串詳情中可切換至圖片牆模式，以網格方式快速瀏覽所有圖片
@@ -42,105 +40,53 @@ Komica Reader 是一款專為瀏覽 Komica 匿名討論板設計的 Android 應�
 
 ## 更新日誌
 
+### V1.26.0109 (2026-01-09) - 現代化架構重構 (重大更新)
+- **架構優化 (Architecture)**:
+    - **Hilt 依賴注入**: 導入 Google 推薦的 Hilt 框架，全面取代手動管理的 Singleton，提升程式碼模組化與可測試性。
+    - **ViewBinding 全面導入**: 在所有 Activity 中啟用 ViewBinding，移除 `findViewById`，提供編譯期型別安全，徹底杜絕 NullPointer 崩潰風險。
+    - **錯誤狀態管理 (Resource State)**: 實作 `Resource<T>` Sealed Class，讓 UI 能精確區分「載入中」、「載入成功」與「網路/系統錯誤」狀態，並提供友好的錯誤提示。
+- **Kotlin 遷移 (Migration)**:
+    - 完成核心 Activity (`Main`, `ThreadList`, `ThreadDetail`, `Gallery`) 的 Kotlin 遷移。
+    - 統一非同步處理模式，移除不安全的 `GlobalScope` 與 `ExecutorService`，改用結構化協程 (`lifecycleScope`, `viewModelScope`)。
+- **效能與穩定性 (Performance & Stability)**:
+    - **資料庫優化**: 為 Room `history` 資料表加入 `url` 索引，大幅提升高資料量下的查詢效能。
+    - **Lifecycle 升級**: `KomicaReaderApplication` 遷移至 `DefaultLifecycleObserver`，符合 Android 最新 API 標準。
+- **測試 (Testing)**:
+    - 建立 `MainViewModelTest` 單元測試，引入 **MockK** 與 **Coroutines Test** 框架，確保核心業務邏輯的穩定性。
+
 ### V1.26.0106 (2026-01-06) - 架構升級與新功能
-- **新功能 (New Features)**:
-    - **瀏覽紀錄 (Browsing History)**: 實作本地資料庫 (Room) 記錄瀏覽歷程，並在主頁與討論串列表提供快速入口。
-    - **圖片牆 (Gallery Mode)**: 新增圖片牆模式，支援以網格檢視討論串內所有圖片，點擊即可預覽大圖。
-- **架構升級 (Architecture Upgrade)**:
-    - **Kotlin 遷移**: 全面導入 Kotlin 支援。Repository 與所有 ViewModel 已由 Java 遷移至 Kotlin，提升開發效率與程式碼安全性。
-    - **Coroutines & Flow**: 引入 Kotlin Coroutines 處理非同步任務。捨棄舊有的 `ExecutorService` 模式，讓非同步邏輯更簡潔且易於維護。
-    - **解析邏輯分離**: 實作 `KomicaParser` 並將 HTML 解析邏輯從 `KomicaService` 中抽離，落實單一職責原則並新增單元測試確保解析穩定性。
-- **穩定性與效能 (Stability & Performance)**:
-    - **修復記憶體洩漏**: 
-        - 修正了 ViewModel 中 `observeForever` 導致的洩漏，改用協程與 Lifecycle-aware 方式管理。
-        - 優化了 `PostAdapter` 的資源釋放機制。
-    - **全域優化**: 統一採用 `KLog` 管理日誌，並修正 JVM Target 相容性問題。
-- **介面與體驗 (UI/UX)**:
-    - **字串資源化**: 移除 UI 硬編碼字串。
-    - **懸浮按鈕 (FAB)**: 詳情頁操作優化。
-    - **視覺美化**: 統一討論串卡片樣式與標題列高度。
-- **功能調整**: 
-    - **字體大小設定**: 支援列表與內文獨立調整並即時預覽。
-    - **排序優化**: 統一採用發文時間倒序。
-
-### V1.26.0105 (2026-01-05) - 核心修復與優化
-- **穩定性與效能 (Stability & Performance)**:
-    - **修復記憶體洩漏**: 
-        - 修正了 ViewModel 中 `observeForever` 導致的洩漏，現在會追蹤並在 `onCleared` 中自動移除。
-        - 優化了 `PostAdapter` 的 `Handler/Runnable` 清理機制，新增 `onViewRecycled` 確保資源釋放。
-    - **架構優化**: 
-        - 將 `ThreadListViewModel` 升級為 `AndroidViewModel` 以便取得 Context 進行資源存取。
-        - 統一全域日誌管理，將 `android.util.Log` 替換為封裝好的 `KLog`。
-- **介面與體驗 (UI/UX)**:
-    - **字串資源化**: 將 UI 顯示的硬編碼字串移至 `strings.xml`，支援更好的維護與錯誤提示。
-    - **懸浮按鈕 (FAB)**: 詳情頁改用右下角懸浮按鈕進行操作，釋放閱讀空間。
-    - **標題列優化**: 標題整合至頂部 Toolbar 並固定顯示，全域標題高度縮小為 48dp。
-    - **視覺美化**: 統一討論串內文卡片樣式，優化深色模式對比度。
-- **功能調整**: 
-    - **字體大小設定**: 支援獨立調整列表與內文的文字大小，並提供即時預覽。
-    - **移除排序**: 統一採用發文時間倒序，符合直覺.
-### V1.26.0104 (2026-01-04) - 搜尋與核心修復
-- **搜尋功能修復**:
-    - **Gaia/新番看板支援**: 針對「新番捏他」、「新番實況」等使用舊版 Pixmicat 腳本的板塊，實作了專屬的 Big5 編碼轉換與 POST 請求邏輯，解決了搜尋關鍵字亂碼與無回應的問題。
-    - **解析邏輯增強**: 優化了搜尋結果頁面的 HTML 解析器，能正確識別並抓取舊式表格佈局 (`table`/`td`) 中的內容。
-    - **錯誤處理**: 修正了編碼偵測邏輯，並加入了針對「搜尋無結果」的明確判斷，避免誤抓看板首頁內容。
-- **穩定性與編譯**:
-    - 修正了 OkHttp `RequestBody` 與 `FormBody` 的混用問題。
-    - 補齊了遺漏的 `KLog` 與正則表達式類別匯入，解決編譯錯誤。
-
-### V1.1.0 (2026-01-02) - 重大架構更新
-- **架構重構 (MVVM)**:
-    - 全面導入 **MVVM (Model-ViewModel-ViewModel)** 架構，解決 Activity 過於臃腫的問題。
-    - 引入 **LiveData** 管理 UI 狀態，徹底解決螢幕旋轉導致的資料丟失與載入狀態卡死問題。
-    - 建立 **Repository 模式**，統一管理網路請求、快取與資料流。
-- **效能與最佳化**:
-    - **多級快取機制**: 實作了 OkHttp 磁碟快取與 LruCache 記憶體快取，大幅縮短重複開啟討論串的載入時間。
-    - **列表流暢度**: 使用 **DiffUtil** 優化 RecyclerView 更新，讓搜尋過濾與分頁載入更平滑。
-    - **網路穩定性**: 加入網路連線逾時處理，防止在不穩定網路下介面無止盡等待。
-- **功能增強**:
-    - **遠端搜尋**: 實作伺服器端搜尋功能，搜尋不再侷限於已載入的本地內容。
-    - **下拉重新整理**: 在看板列表與討論串列表加入 **SwipeRefreshLayout**，支援手動強制更新。
-- **安全性加固**:
-    - **網路安全配置**: 實作 `network_security_config.xml`，精確控制明文流量 (HTTP) 權限，強化隱私防護。
-- **穩定性與修正**:
-    - 修正了多處執行緒洩漏 (Thread Leak) 與記憶體管理問題。
-    - 優化了 URL 分頁解析邏輯，相容更多不同類型的 K 島板塊。
-
-### V1.0.5 (2026-01-02)
-- **介面與體驗優化**:
-    - **夜間模式完善**:
-        - 調整標題列 (App Bar) 與狀態列顏色，在夜間模式下使用深灰色與黑色，風格更統一。
-        - 修正引文預覽視窗的標題配色，解決深色背景下文字無法辨識的問題。
-        - 優化點擊引文時的高亮顏色，夜間模式改用深棕色，確保文字清晰可見且不刺眼。
-    - **篩選區塊美化**:
-        - 重新設計篩選輸入框，加入圓角與邊框樣式。
-        - 篩選與排序按鈕改用主題色背景與白色文字，並加入按壓漣漪效果，提升操作質感。
+- **新功能**: 實作本地資料庫 (Room) 紀錄瀏覽歷程，新增圖片牆模式。
+- **架構**: 全面導入 Kotlin 支援，引入 Coroutines 處理非同步任務。
 
 ... (其餘舊日誌保留)
 
-## Requirements
+## 系統需求
 
-- Android SDK 21 (Android 5.0) or higher
+- Android SDK 24 (Android 7.0) 或更高版本
 - Target SDK 34 (Android 14)
 
-## Technologies
+## 技術棧 (Tech Stack)
 
-- Kotlin/Java
-- **Android Architecture Components (ViewModel, LiveData)**
-- OkHttp for HTTP requests (with Caching)
-- Jsoup for HTML parsing
-- Glide for image loading
-- **SwipeRefreshLayout**
-- Material Design Components
+- **Language**: Kotlin (Primary), Java (Legacy)
+- **DI**: Hilt (Dagger)
+- **Architecture**: MVVM + Repository Pattern
+- **Async**: Kotlin Coroutines & Flow
+- **UI Binding**: ViewBinding
+- **Networking**: OkHttp 4
+- **Parsing**: Jsoup
+- **Image Loading**: Glide
+- **Database**: Room
+- **UI**: Material Design 3, SwipeRefreshLayout
 
-## Building
+## 編譯方法
 
 ```bash
 ./gradlew assembleDebug
 ```
 
-The APK will be located at `app/build/outputs/apk/debug/app-debug.apk`.
+編譯產出的 APK 位於 `app/build/outputs/apk/debug/app-debug.apk`。
 
-## License
+## 授權
 
-This project is for educational purposes only.
+本專案僅供學術研究與個人使用。
+

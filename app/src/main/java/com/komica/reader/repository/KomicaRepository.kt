@@ -4,23 +4,20 @@ import android.content.Context
 import android.util.LruCache
 import com.komica.reader.model.BoardCategory
 import com.komica.reader.model.Thread
+import com.komica.reader.model.Resource
 import com.komica.reader.service.KomicaService
 import com.komica.reader.util.KLog
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.Cache
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.io.File
 import java.util.concurrent.TimeUnit
 import android.webkit.*
-import kotlinx.coroutines.*
 
 class KomicaRepository private constructor(context: Context) {
 
-    private val appContext = context.applicationContext
     private val threadDetailCache = LruCache<String, Thread>(20)
     private var boardCategoryCache: List<BoardCategory>? = null
 
@@ -39,15 +36,16 @@ class KomicaRepository private constructor(context: Context) {
         val client = OkHttpClient.Builder()
             .cache(cache)
             .cookieJar(cookieJar)
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(15, TimeUnit.SECONDS)
-            .writeTimeout(15, TimeUnit.SECONDS)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
             .followRedirects(true)
             .followSslRedirects(true)
             .addInterceptor { chain ->
                 val original = chain.request()
+                // Use Mobile UA to match WebView and avoid token/session mismatch
                 val request = original.newBuilder()
-                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
                     .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
                     .header("Accept-Language", "zh-TW,zh;q=0.8,en-US;q=0.5,en;q=0.3")
                     .build()
@@ -67,12 +65,9 @@ class KomicaRepository private constructor(context: Context) {
             val currentCookies = cookieStore[host] ?: ArrayList()
             
             KLog.d("CookieJar: Saving ${cookies.size} cookies for $host")
-            for (c in cookies) {
-                KLog.d("CookieJar: + ${c.name}")
-            }
             
             for (newCookie in cookies) {
-                // Remove existing cookie with the same name
+                // Remove existing cookie with the same name/domain/path
                 val it = currentCookies.iterator()
                 while (it.hasNext()) {
                     val current = it.next()
@@ -87,32 +82,28 @@ class KomicaRepository private constructor(context: Context) {
 
         @Synchronized
         override fun loadForRequest(url: okhttp3.HttpUrl): List<okhttp3.Cookie> {
-            val host = url.host
-            val cookies = cookieStore[host] ?: return emptyList()
-            
-            // Filter expired cookies
-            val validCookies = ArrayList<okhttp3.Cookie>()
-            val it = cookies.iterator()
+            val result = ArrayList<okhttp3.Cookie>()
             val now = System.currentTimeMillis()
-            while (it.hasNext()) {
-                val current = it.next()
-                if (current.expiresAt > now) {
-                    validCookies.add(current)
-                } else {
-                    it.remove()
+            
+            for (cookies in cookieStore.values) {
+                val it = cookies.iterator()
+                while (it.hasNext()) {
+                    val cookie = it.next()
+                    if (cookie.expiresAt < now) {
+                        it.remove()
+                    } else if (cookie.matches(url)) {
+                        result.add(cookie)
+                    }
                 }
             }
             
-            KLog.d("CookieJar: Loading ${validCookies.size} cookies for $host")
-            if (validCookies.isNotEmpty()) {
-                for (c in validCookies) {
-                    KLog.d("CookieJar: -> ${c.name}")
-                }
-            } else {
-                KLog.w("CookieJar: No cookies found for $host!")
+            val host = url.host
+            KLog.d("CookieJar: Loading ${result.size} cookies for $host")
+            for (c in result) {
+                KLog.d("CookieJar: -> ${c.name}")
             }
             
-            return validCookies
+            return result
         }
 
         fun addCookie(url: okhttp3.HttpUrl, cookie: okhttp3.Cookie) {
@@ -121,7 +112,7 @@ class KomicaRepository private constructor(context: Context) {
 
         @Synchronized
         fun addRawCookies(url: okhttp3.HttpUrl, cookieString: String?) {
-            if (cookieString == null) return
+            if (cookieString == null || cookieString.isEmpty()) return
             val host = url.host
             val pairs = cookieString.split(";").map { it.trim() }
             val cookies = ArrayList<okhttp3.Cookie>()
@@ -129,13 +120,34 @@ class KomicaRepository private constructor(context: Context) {
                 if (pair.isEmpty()) continue
                 val parts = pair.split("=", limit = 2)
                 if (parts.size == 2) {
-                    val cookie = okhttp3.Cookie.Builder()
-                        .name(parts[0])
-                        .value(parts[1])
-                        .domain(host)
-                        .path("/")
-                        .build()
-                    cookies.add(cookie)
+                    val name = parts[0]
+                    val value = parts[1]
+                    
+                    val domainsToCheck = ArrayList<String>()
+                    domainsToCheck.add(host)
+                    
+                    if ((name.startsWith("cf_") || name.startsWith("__cf")) && host.count { it == '.' } >= 2) {
+                        val hostParts = host.split(".")
+                        if (hostParts.size >= 2) {
+                            val baseDomain = hostParts[hostParts.size - 2] + "." + hostParts[hostParts.size - 1]
+                            domainsToCheck.add(baseDomain)
+                            domainsToCheck.add(".$baseDomain")
+                        }
+                    }
+
+                    for (d in domainsToCheck) {
+                        try {
+                            val cookie = okhttp3.Cookie.Builder()
+                                .name(name)
+                                .value(value)
+                                .domain(d)
+                                .path("/")
+                                .build()
+                            cookies.add(cookie)
+                        } catch (e: Exception) {
+                            // Ignore invalid domains
+                        }
+                    }
                 }
             }
             if (cookies.isNotEmpty()) {
@@ -145,194 +157,96 @@ class KomicaRepository private constructor(context: Context) {
         }
     }
 
-    suspend fun fetchBoards(forceRefresh: Boolean): List<BoardCategory> = withContext(Dispatchers.IO) {
+    suspend fun fetchBoards(forceRefresh: Boolean): Resource<List<BoardCategory>> = withContext(Dispatchers.IO) {
         if (!forceRefresh) {
-            boardCategoryCache?.let { return@withContext it }
+            boardCategoryCache?.let { return@withContext Resource.Success(it) }
         }
 
         try {
             val result = KomicaService.FetchBoardsTask().call()
             if (result != null) {
                 boardCategoryCache = result
+                Resource.Success(result)
+            } else {
+                Resource.Error(Exception("Failed to fetch boards: Empty response"))
             }
-            result ?: emptyList()
         } catch (e: Exception) {
             KLog.e("Error fetching boards: ${e.message}")
-            emptyList()
+            Resource.Error(e)
         }
     }
 
-    suspend fun fetchThreads(boardUrl: String, page: Int): List<Thread> = withContext(Dispatchers.IO) {
+    suspend fun fetchThreads(boardUrl: String, page: Int): Resource<List<Thread>> = withContext(Dispatchers.IO) {
         try {
             val result = KomicaService.FetchThreadsTask(boardUrl, page).call()
-            result ?: emptyList()
+            if (result != null) {
+                Resource.Success(result)
+            } else {
+                Resource.Error(Exception("Failed to fetch threads"))
+            }
         } catch (e: Exception) {
             KLog.e("Error fetching threads: ${e.message}")
-            emptyList()
+            Resource.Error(e)
         }
     }
 
-    suspend fun fetchThreadDetail(threadUrl: String, forceRefresh: Boolean): Thread? = withContext(Dispatchers.IO) {
+    suspend fun fetchThreadDetail(threadUrl: String, forceRefresh: Boolean): Resource<Thread> = withContext(Dispatchers.IO) {
         if (!forceRefresh) {
-            threadDetailCache.get(threadUrl)?.let { return@withContext it }
+            threadDetailCache.get(threadUrl)?.let { return@withContext Resource.Success(it) }
         }
 
         try {
             val result = KomicaService.FetchThreadDetailTask(threadUrl).call()
             if (result != null) {
                 threadDetailCache.put(threadUrl, result)
+                Resource.Success(result)
+            } else {
+                Resource.Error(Exception("Failed to fetch thread detail"))
             }
-            result
         } catch (e: Exception) {
             KLog.e("Error fetching thread detail: ${e.message}")
-            null
+            Resource.Error(e)
         }
     }
 
-    suspend fun searchThreads(boardUrl: String, query: String): List<Thread> = withContext(Dispatchers.IO) {
+    suspend fun searchThreads(boardUrl: String, query: String): Resource<List<Thread>> = withContext(Dispatchers.IO) {
         try {
             val result = KomicaService.BoardSearchTask(boardUrl, query).call()
-            result ?: emptyList()
+            if (result != null) {
+                Resource.Success(result)
+            } else {
+                Resource.Error(Exception("Search returned no results or failed"))
+            }
         } catch (e: Exception) {
             KLog.e("Error searching threads: ${e.message}")
-            emptyList()
+            Resource.Error(e)
         }
     }
 
-    suspend fun sendReply(boardUrl: String, resto: Int, name: String, email: String, subject: String, comment: String): Boolean = withContext(Dispatchers.IO) {
+    suspend fun sendReply(boardUrl: String, resto: Int, name: String, email: String, subject: String, comment: String, turnstileToken: String?): Resource<Boolean> = withContext(Dispatchers.IO) {
         try {
-            // 1. Try to fetch Turnstile Token (Cloudflare) via WebView on Main thread
-            // This is CRITICAL: it also populates the CookieJar with Cloudflare cookies
-            val turnstileToken = fetchTurnstileToken(boardUrl)
-            
-            // 2. Inject timerecord cookie manually if not already present
             val urlObj = boardUrl.toHttpUrlOrNull()
             if (urlObj != null) {
-                val timerecord = okhttp3.Cookie.Builder()
-                    .name("timerecord")
-                    .value((System.currentTimeMillis() / 1000 - 300).toString())
-                    .domain(urlObj.host)
-                    .path("/")
-                    .build()
-                cookieJar.addCookie(urlObj, timerecord)
+                val cookieManager = CookieManager.getInstance()
+                val cookieStr = cookieManager.getCookie(boardUrl)
+                
+                KLog.d("=== COOKIES SYNC CHECK ===")
+                KLog.d("Target URL: $boardUrl")
+                KLog.d("WebView Cookies: $cookieStr")
+                
+                if (cookieStr != null) {
+                    cookieJar.addRawCookies(urlObj, cookieStr)
+                } else {
+                    KLog.w("⚠️ No cookies found in WebView for $boardUrl")
+                }
             }
-            
-            // 3. Execute reply task with tokens and synced cookies
-            KomicaService.SendReplyTask(boardUrl, resto, name, email, subject, comment, turnstileToken).call()
+
+            val result = KomicaService.SendReplyTask(boardUrl, resto, name, email, subject, comment, turnstileToken).call()
+            Resource.Success(result)
         } catch (e: Exception) {
             KLog.e("Error sending reply: ${e.message}")
-            false
+            Resource.Error(e)
         }
-    }
-
-    private suspend fun fetchTurnstileToken(url: String): String? = withContext(Dispatchers.Main) {
-        KLog.d("WebView: Initializing for Cloudflare verification...")
-        val webView = try {
-            WebView(appContext)
-        } catch (e: Exception) {
-            KLog.e("WebView: Failed to create WebView: ${e.message}")
-            return@withContext null
-        }
-        
-        val urlObj = url.toHttpUrlOrNull()
-        val boardBaseUrl = url.replace(Regex("pixmicat\\.php.*$"), "")
-
-        // Token storage for JS interface
-        var capturedToken: String? = null
-
-        webView.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            databaseEnabled = true
-            userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
-
-        // Inject a real JS interface to handle the callback reliably
-        webView.addJavascriptInterface(object {
-            @JavascriptInterface
-            fun onTokenCaptured(token: String) {
-                KLog.d("WebView: [Interface] Token captured via callback!")
-                capturedToken = token
-            }
-            @JavascriptInterface
-            fun log(msg: String) {
-                KLog.d("WebView: [JS Log] $msg")
-            }
-        }, "AndroidBridge")
-
-        webView.webViewClient = object : WebViewClient() {
-            override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
-                super.onPageStarted(view, url, favicon)
-                // Define the expected callback globally and handle dynamic rendering
-                view?.evaluateJavascript(
-                    "window.onloadTurnstileCallback = function() { " +
-                    "  AndroidBridge.log('Turnstile API Ready'); " +
-                    "  var checkBody = setInterval(function() { " +
-                    "    if (document.body) { " +
-                    "      clearInterval(checkBody); " +
-                    "      var container = document.getElementById('turnstile-container'); " +
-                    "      if (!container) { " +
-                    "        container = document.createElement('div'); " +
-                    "        container.id = 'turnstile-container'; " +
-                    "        document.body.appendChild(container); " +
-                    "      } " +
-                    "      var sitekey = '0x4AAAAAAAHoSO1c88LfQItS'; " + // Default sitekey
-                    "      var existing = document.querySelector('[data-sitekey]'); " +
-                    "      if (existing) sitekey = existing.dataset.sitekey; " +
-                    "      AndroidBridge.log('Rendering Turnstile with key: ' + sitekey); " +
-                    "      turnstile.render(container, { " +
-                    "        sitekey: sitekey, " +
-                    "        callback: function(token) { AndroidBridge.onTokenCaptured(token); } " +
-                    "      }); " +
-                    "    } " +
-                    "  }, 100); " +
-                    "};", null)
-            }
-
-            override fun onPageFinished(view: WebView?, loadedUrl: String?) {
-                super.onPageFinished(view, loadedUrl)
-                KLog.d("WebView: Page finished loading. Syncing cookies...")
-                syncCookies(loadedUrl ?: url, urlObj)
-            }
-        }
-
-        val extraHeaders = HashMap<String, String>()
-        extraHeaders["Referer"] = boardBaseUrl
-        
-        KLog.d("WebView: Loading URL: $url with Referer: $boardBaseUrl")
-        webView.loadUrl(url, extraHeaders)
-
-        // Poll for token or interface capture
-        val result = withTimeoutOrNull(25000) {
-            for (i in 1..15) {
-                delay(1500)
-                
-                // 1. Check interface capture
-                if (!capturedToken.isNullOrEmpty()) {
-                    KLog.d("WebView: [Success] Token acquired via interface!")
-                    return@withTimeoutOrNull capturedToken
-                }
-
-                // 2. Fallback: Manual DOM poll
-                val t = pollTurnstileToken(webView)
-                if (!t.isNullOrEmpty() && t != "null" && t != "undefined") {
-                    KLog.d("WebView: [Success] Token acquired via DOM poll!")
-                    return@withTimeoutOrNull t
-                }
-                
-                // 3. Sync cookies (looking for cf_clearance)
-                if (syncCookies(url, urlObj)) {
-                    KLog.d("WebView: [Target Found] cf_clearance cookie acquired!")
-                }
-                
-                KLog.d("WebView: Polling verification status ($i/15)...")
-            }
-            null
-        }
-
-        webView.stopLoading()
-        webView.destroy()
-        result
     }
 
     private fun syncCookies(url: String, urlObj: okhttp3.HttpUrl?): Boolean {
@@ -341,29 +255,6 @@ class KomicaRepository private constructor(context: Context) {
         val cookieStr = cookieManager.getCookie(url)
         cookieJar.addRawCookies(urlObj, cookieStr)
         return cookieStr?.contains("cf_clearance") == true
-    }
-
-    private suspend fun pollTurnstileToken(webView: WebView): String? {
-        val deferred = CompletableDeferred<String?>()
-        webView.evaluateJavascript("(function() { " +
-                "var input = document.getElementsByName('cf-turnstile-response')[0];" +
-                "return input ? input.value : null;" +
-                "})();") { value ->
-            // evaluateJavascript returns JSON wrapped string (e.g. "\"token\"")
-            val cleanValue = value?.trim('\"')
-            deferred.complete(if (cleanValue == "null" || cleanValue == "undefined") null else cleanValue)
-        }
-        return deferred.await()
-    }
-
-    /**
-     * Compatibility method for Java callers.
-     * Uses Dispatchers.IO to run the runnable.
-     */
-    fun execute(runnable: Runnable) {
-        kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
-            runnable.run()
-        }
     }
 
     companion object {

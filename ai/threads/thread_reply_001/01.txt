@@ -1,0 +1,67 @@
+﻿# 討論串回文失效 - 最新分析建議（重新讀取後）
+
+**分析日期時間:** 2026-01-09 08:39  
+**專案路徑:** `W:\KomicaReader`  
+**Log 檔:** `W:\KomicaReader\ai\threads\thread_reply_001\99.txt`  
+**參考格式:** 00.txt（未找到 03.txt，先依 00.txt 風格輸出）
+
+---
+
+## 觀察重點（依最新 Log）
+
+1. Log 顯示 Turnstile 載入時出現錯誤：`Unable to find onload callback 'onloadTurnstileCallback'`（立即與 1 秒後各出現一次）。
+2. 沒有看到 `V4.1 State` 或 `Auto-clicked Cloudflare checkbox` 相關 KLog，代表流程未進入「偵測頁面狀態」或記錄被遺漏。
+3. WebView 有載入完成 (`WebView finish`) 但後續無回文成功、無成功導頁，顯示卡在驗證階段或未觸發送出。
+4. Cloudflare 可能要求「人工勾選驗證您是人類」，而目前機制偏向自動嘗試點擊，且未檢查 token 是否生成。
+
+---
+
+## 可能原因
+
+1. **Turnstile onload callback 未定義**
+   - Turnstile Script 需要 `onloadTurnstileCallback`，但頁面上沒有定義，導致 widget 未正常初始化。
+2. **驗證流程未被正確監控**
+   - 沒有看到 `V4.1 State` 的記錄，可能是 `checkPageState()` 未執行或執行失敗。
+3. **勾選完成後未確認 token**
+   - 未監控 `cf-turnstile-response`，可能在 token 尚未產生時就繼續流程。
+4. **自動點擊 checkbox 成功率低**
+   - Cloudflare 的 checkbox 多在 iframe/shadow DOM 內，直接點擊可能無效。
+
+---
+
+## 最小修改方案（優先）
+
+1. **在 WebView 載入前補上 onload callback**
+   - 目標是先定義 `window.onloadTurnstileCallback`，避免 Turnstile 找不到函式。
+   - 建議在 `onPageStarted` 或 `shouldInterceptRequest` 做最小注入（不改伺服器端）。
+2. **加上 token 監控再進入 FORM**
+   - 監測 `input[name=cf-turnstile-response]` 是否有值，只有有值才允許送出。
+3. **保留人工勾選流程**
+   - 當偵測到驗證頁時，停止自動 submit，提示使用者「先勾選驗證您是人類」。
+4. **補上關鍵 KLog**
+   - 在 `checkPageState()` 進入點、CHALLENGE 判斷、FORM 判斷、送出前後補 log，確保流程可追蹤。
+
+---
+
+## 最佳實務方案（建議方向）
+
+1. **驗證與送出分離**
+   - WebView 只負責 Cloudflare 驗證，成功後回傳 token/cookie。
+   - 回文送出改由 `KomicaRepository.sendReply()` 統一處理。
+2. **同步必要 cookie**
+   - 驗證完成後同步 `cf_clearance` + `timerecord`，避免被視為 Spambot。
+3. **統一錯誤處理**
+   - 將 Turnstile 與送出流程的錯誤訊息集中處理，提升可讀性與可維護性。
+4. **加入狀態機與超時控制**
+   - CHALLENGE、FORM、SUBMIT 三段式狀態，超時時回傳明確錯誤。
+
+---
+
+## 最佳建議
+
+- 先做「最小修改方案」：補 onload callback + token 監控 + 手動勾選提示，確認能順利通過 Cloudflare。
+- 若仍不穩定，再升級為「驗證與送出分離」的最佳實務架構。
+
+---
+*建議輸出工具: Codex*  
+*最後更新: 2026-01-09 08:39*

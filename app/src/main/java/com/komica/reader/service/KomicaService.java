@@ -23,6 +23,7 @@ import com.komica.reader.util.KomicaParser;
 
 public class KomicaService {
     private static final String BASE_URL = "http://komica1.org";
+    private static final String MOBILE_USER_AGENT = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36";
     private static volatile OkHttpClient client = new OkHttpClient.Builder()
             .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
             .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
@@ -32,7 +33,7 @@ public class KomicaService {
             .addInterceptor(chain -> {
                 Request original = chain.request();
                 Request request = original.newBuilder()
-                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                        .header("User-Agent", MOBILE_USER_AGENT)
                         .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
                         .header("Accept-Language", "zh-TW,zh;q=0.8,en-US;q=0.5,en;q=0.3")
                         .method(original.method(), original.body())
@@ -260,60 +261,114 @@ public class KomicaService {
 
             KLog.d("Send Reply POST URL: " + postUrl + " | Resto: " + resto + " | Charset: " + charsetName);
 
+            // --- 1. Timerecord Cookie Validation & Warm-up ---
+            // Pixmicat requires 'timerecord' cookie to calculate post time. Missing or too-fresh timerecord causes "Spambot" error.
+            java.net.URL urlObj = new java.net.URL(postUrl);
+            String host = urlObj.getHost();
+            
+            // Always perform warm-up to ensure fresh cookies and session
+            KLog.w("⚠️ Performing warm-up request sequence...");
+
+            // Step 1: Visit Index Page (simulating user entry)
+            String indexUrl = baseUrl + "index.htm";
+            Request indexRequest = new Request.Builder()
+                    .url(indexUrl)
+                    .header("User-Agent", MOBILE_USER_AGENT)
+                    .build();
+            
+            try (Response response = client.newCall(indexRequest).execute()) {
+                KLog.d("Index warm-up status: " + response.code());
+            } catch (Exception e) {
+                KLog.e("Index warm-up failed: " + e.getMessage());
+            }
+            
+            try { java.lang.Thread.sleep(1000); } catch (InterruptedException e) {}
+
+            // Step 2: Visit Reply Form Page (Actual Target)
+            String formUrl = baseUrl + "pixmicat.php?res=" + resto;
+            Request formRequest = new Request.Builder()
+                    .url(formUrl)
+                    .header("User-Agent", MOBILE_USER_AGENT)
+                    .header("Referer", indexUrl)
+                    .build();
+            
+            try (Response response = client.newCall(formRequest).execute()) {
+                KLog.d("Form warm-up status: " + response.code());
+            } catch (Exception e) {
+                KLog.e("Form warm-up failed: " + e.getMessage());
+            }
+            
+            // Re-check cookie and force refresh if needed
+            List<okhttp3.Cookie> cookies = client.cookieJar().loadForRequest(okhttp3.HttpUrl.parse(postUrl));
+            long currentTimerecordValue = 0;
+            for (okhttp3.Cookie c : cookies) {
+                if (c.name().equals("timerecord")) {
+                    try {
+                        currentTimerecordValue = Long.parseLong(c.value());
+                    } catch (NumberFormatException e) {
+                        currentTimerecordValue = 0;
+                    }
+                    break;
+                }
+            }
+            
+            long now = System.currentTimeMillis() / 1000;
+            long minTimerecordAge = 120; // 2 minutes minimum
+            
+            if (currentTimerecordValue == 0 || (now - currentTimerecordValue) < minTimerecordAge) {
+                KLog.w("⚠️ timerecord missing or too fresh. Injecting fresh value (target age: " + minTimerecordAge + "s)...");
+                long freshTime = now - minTimerecordAge;
+                okhttp3.Cookie freshCookie = new okhttp3.Cookie.Builder()
+                        .name("timerecord")
+                        .value(String.valueOf(freshTime))
+                        .domain(host)
+                        .path("/")
+                        .build();
+                
+                client.cookieJar().saveFromResponse(
+                    okhttp3.HttpUrl.parse(postUrl), 
+                    java.util.Collections.singletonList(freshCookie)
+                );
+                KLog.d("Injected fresh timerecord: " + freshTime + " (age: " + minTimerecordAge + "s)");
+            } else {
+                KLog.d("Existing timerecord is acceptable (age: " + (now - currentTimerecordValue) + "s)");
+            }
+            
+            // Log final cookie state before POST for debugging
+            KLog.d("=== FINAL COOKIE STATE ===");
+            cookies = client.cookieJar().loadForRequest(okhttp3.HttpUrl.parse(postUrl));
+            for (okhttp3.Cookie c : cookies) {
+                KLog.d("Cookie: " + c.name() + "=" + c.value() + " (domain=" + c.domain() + ", path=" + c.path() + ")");
+            }
+            for (okhttp3.Cookie c : cookies) {
+                if (c.name().equals("timerecord")) {
+                    try {
+                        long age = (now - Long.parseLong(c.value()));
+                        KLog.d("timerecord age at POST time: " + age + " seconds");
+                    } catch (Exception e) {}
+                }
+            }
+
             Map<String, String> hiddenFields = new HashMap<>();
 
-            // Warm-up and Parse Form to get hidden fields (anti-spam tokens)
+            // Simulate user typing delay (Increased to 8s for safety)
             try {
-                Request warmUpRequest = new Request.Builder()
-                        .url(boardUrl) // Access the thread itself to get the form
-                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                        .build();
-                KLog.d("Warming up and parsing form from: " + boardUrl);
-                
-                try (Response response = client.newCall(warmUpRequest).execute()) {
-                    if (response.isSuccessful()) {
-                        String html = response.body().string();
-                        Document doc = Jsoup.parse(html, boardUrl);
-                        
-                        // Find the reply form. usually action="pixmicat.php"
-                        Element form = doc.selectFirst("form[action*='pixmicat.php']");
-                        if (form == null) form = doc.selectFirst("form[enctype='multipart/form-data']");
-                        
-                        if (form != null) {
-                            Elements inputs = form.select("input[type=hidden]");
-                            for (Element input : inputs) {
-                                String name = input.attr("name");
-                                String value = input.attr("value");
-                                if (name != null && !name.isEmpty()) {
-                                    hiddenFields.put(name, value);
-                                    KLog.d("Found hidden field: " + name + " = " + value);
-                                }
-                            }
-                        } else {
-                            KLog.w("Could not find reply form in warm-up page");
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                KLog.w("Warm-up/Parse failed: " + e.getMessage());
+                KLog.d("Simulating user typing delay, sleeping for 8000ms...");
+                java.lang.Thread.sleep(8000);
+            } catch (InterruptedException e) {
+                // ignore
             }
 
             MultipartBody.Builder builder = new MultipartBody.Builder()
                     .setType(MultipartBody.FORM);
 
-            // Add extracted hidden fields first
-            for (Map.Entry<String, String> entry : hiddenFields.entrySet()) {
-                // Skip fields we intend to set explicitly to avoid duplication or stale values
-                String key = entry.getKey();
-                if (key.equals("resto") || key.equals("name") || key.equals("email") || 
-                    key.equals("sub") || key.equals("com") || key.equals("pwd") || key.equals("noimg")) {
-                    continue;
-                }
-                addStringPart(builder, key, entry.getValue(), charset);
-            }
-
             // Set User Fields
             if (!hiddenFields.containsKey("mode")) addStringPart(builder, "mode", "regist", charset);
+            
+            // Inject standard Pixmicat hidden fields since parsing was removed
+            // These are critical for passing anti-spam checks that look for specific form structure
+            addStringPart(builder, "MAX_FILE_SIZE", "5242880", charset);
+            addStringPart(builder, "upfile_path", "", charset);
             
             addStringPart(builder, "resto", String.valueOf(resto), charset);
             addStringPart(builder, "name", name != null ? name : "", charset);
@@ -322,15 +377,22 @@ public class KomicaService {
             addStringPart(builder, "com", comment != null ? comment : "", charset);
             addStringPart(builder, "pwd", "komicareader", charset);
             addStringPart(builder, "noimg", "on", charset); // Checkbox, usually not hidden
+            
+            // Add standard send button field
+            String sendText = isGaia ? "送出" : "Submit";
+            addStringPart(builder, "send", sendText, charset);
 
             // Add Turnstile Token if provided
             if (turnstileToken != null && !turnstileToken.isEmpty()) {
                 addStringPart(builder, "cf-turnstile-response", turnstileToken, charset);
                 KLog.d("Added Turnstile Token: " + turnstileToken.substring(0, Math.min(10, turnstileToken.length())) + "...");
+            } else {
+                KLog.w("Warning: No Turnstile Token provided for reply. This might cause 503 error on protected boards.");
             }
 
             // Add empty file part (Critical for anti-spam checks that expect multipart structure)
-            builder.addFormDataPart("upfile", "", RequestBody.create(MediaType.parse("application/octet-stream"), new byte[0]));
+            // Fix parameter order for OkHttp 4.x (byte[], MediaType)
+            builder.addFormDataPart("upfile", "", RequestBody.create(new byte[0], MediaType.parse("application/octet-stream")));
 
             RequestBody body = builder.build();
 
@@ -342,16 +404,19 @@ public class KomicaService {
                 // ignore
             }
 
+            // Use the specific reply form URL as referer
+            String refererUrl = baseUrl + "pixmicat.php?res=" + resto;
+
             Request request = new Request.Builder()
                     .url(postUrl)
                     .post(body)
-                    .header("Referer", boardUrl)
+                    .header("Referer", refererUrl)
                     .header("Origin", origin)
                     .header("Sec-Fetch-Site", "same-origin")
                     .header("Sec-Fetch-Mode", "navigate")
                     .header("Sec-Fetch-User", "?1")
                     .header("Sec-Fetch-Dest", "document")
-                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .header("User-Agent", MOBILE_USER_AGENT)
                     .build();
 
             try (Response response = client.newCall(request).execute()) {
@@ -364,37 +429,37 @@ public class KomicaService {
                 // Decode body with smart encoding detection
                 byte[] responseBytes = response.body().bytes();
                 
+                KLog.d("Reply response code: " + response.code());
+                
                 // Log hex for debugging
                 StringBuilder hex = new StringBuilder();
                 for (int i = 0; i < Math.min(32, responseBytes.length); i++) {
                     hex.append(String.format("%02X ", responseBytes[i]));
                 }
-                KLog.d("Response Hex: " + hex.toString());
+                KLog.d("Response Hex (First 32 bytes): " + hex.toString());
                 
                 // Try decoding with target charset
                 String responseBody = new String(responseBytes, charsetName);
                 
                 // Heuristic: If it's Gaia (Big5) but the result contains replacement chars and 
                 // looks like valid UTF-8, retry with UTF-8.
-                if (isGaia && (responseBody.contains("\uFFFD") || responseBody.contains("Spambot"))) {
+                if (isGaia && (responseBody.contains("\uFFFD") || responseBody.contains("Spambot") || responseBody.contains("Cloudflare"))) {
                     try {
                         String utf8Body = new String(responseBytes, "UTF-8");
                         // If UTF-8 decoding doesn't have replacement chars, use it.
                         if (!utf8Body.contains("\uFFFD")) {
                             responseBody = utf8Body;
-                            KLog.d("Heuristic: Switched to UTF-8 decoding for Gaia response");
+                            KLog.d("Heuristic: Switched to UTF-8 decoding for response");
                         }
                     } catch (Exception e) { /* fallback to original */ }
                 }
-                
-                KLog.d("Reply response code: " + response.code());
 
                 if (response.isSuccessful()) {
                     // Strict Success Check:
                     // 1. Meta Refresh to the thread
                     // 2. "文章送出" or "回應送出" (Success messages)
                     boolean hasMetaRefresh = responseBody.contains("meta http-equiv=\"refresh\"") && responseBody.contains("pixmicat.php");
-                    boolean hasSuccessText = responseBody.contains("文章送出") || responseBody.contains("回應送出");
+                    boolean hasSuccessText = responseBody.contains("文章送出") || responseBody.contains("回應送出") || responseBody.contains("成功");
                     
                     if (hasMetaRefresh || hasSuccessText) {
                          KLog.d("Reply success (Verified content)");
@@ -412,6 +477,9 @@ public class KomicaService {
                     KLog.w("Reply failed (No success indicator found). Logging preview:");
                     logErrorBody(responseBody);
                     return false;
+                } else if (response.code() == 503 || response.code() == 403) {
+                    KLog.w("Reply blocked by WAF/Cloudflare (Code " + response.code() + ")");
+                    logErrorBody(responseBody);
                 }
                 
                 KLog.w("Reply response failed, code: " + response.code());
@@ -420,7 +488,20 @@ public class KomicaService {
         }
 
         private void addStringPart(MultipartBody.Builder builder, String name, String value, Charset charset) {
-            builder.addFormDataPart(name, null, RequestBody.create(null, value.getBytes(charset)));
+            String logValue = name.equals("pwd") ? "***" : value;
+            // Try to fix potential log encoding issues for debugging
+            try {
+                if (logValue.length() < 20) {
+                     // Check if it's mojibake (contains many ?)
+                     if (logValue.contains("??")) {
+                         // KLog.d("Value suspicious, raw bytes: " + java.util.Arrays.toString(value.getBytes(charset)));
+                     }
+                }
+            } catch (Exception e) {}
+
+            KLog.d("Adding form field: " + name + " = " + logValue);
+            // Fix parameter order for OkHttp 4.x (byte[], MediaType)
+            builder.addFormDataPart(name, null, RequestBody.create(value.getBytes(charset), MediaType.parse("text/plain; charset=" + charset.name())));
         }
 
         private void logErrorBody(String body) {

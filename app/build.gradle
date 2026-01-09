@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
     id 'kotlin-kapt'
+    alias(libs.plugins.hilt.android)
 }
 
 android {
@@ -10,14 +11,15 @@ android {
 
     buildFeatures {
         buildConfig true
+        viewBinding true
     }
 
     defaultConfig {
         applicationId "com.komica.reader"
         minSdk 24
         targetSdk 34
-        versionCode 1260106
-        versionName "1.26.0106"
+        versionCode 1260109
+        versionName "1.26.0109"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -60,6 +62,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation "androidx.lifecycle:lifecycle-process:2.7.0"
+    implementation(libs.androidx.activity.ktx)
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
@@ -70,8 +73,14 @@ dependencies {
     
     implementation(libs.glide.core)
     kapt(libs.glide.compiler)
+    
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.compiler)
 
     testImplementation 'junit:junit:4.13.2'
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.androidx.core.testing)
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }

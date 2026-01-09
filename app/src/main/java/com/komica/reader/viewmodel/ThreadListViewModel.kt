@@ -4,16 +4,27 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.komica.reader.R
 import com.komica.reader.model.Board
+import com.komica.reader.model.Resource
 import com.komica.reader.model.Thread
 import com.komica.reader.repository.KomicaRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class ThreadListViewModel(application: Application, private val board: Board) : AndroidViewModel(application) {
-    private val repository = KomicaRepository.getInstance(application)
+@HiltViewModel
+class ThreadListViewModel @Inject constructor(
+    application: Application,
+    private val repository: KomicaRepository,
+    savedStateHandle: SavedStateHandle
+) : AndroidViewModel(application) {
+
+    private val board: Board = savedStateHandle.get<Board>("board") 
+        ?: throw IllegalArgumentException("Board is required")
     
     private val _displayThreads = MutableLiveData<List<Thread>>(emptyList())
     val threads: LiveData<List<Thread>> = _displayThreads
@@ -64,35 +75,44 @@ class ThreadListViewModel(application: Application, private val board: Board) : 
         viewModelScope.launch {
             _isLoading.value = true
             
-            val newThreads = repository.fetchThreads(board.url, page)
+            val result = repository.fetchThreads(board.url, page)
             _isLoading.value = false
             
-            if (newThreads.isEmpty()) {
-                consecutiveEmptyPages++
-                if (page == 0) {
-                    _errorMessage.value = getApplication<Application>().getString(R.string.error_fetch_threads)
-                }
-                
-                if (consecutiveEmptyPages >= 3) {
-                    _hasMore.value = false
-                } else {
-                    // 自動嘗試下一頁
-                    delay(500)
-                    loadMore()
-                }
-            } else {
-                consecutiveEmptyPages = 0
-                currentPage = page
-                
-                val uniqueThreads = newThreads.filter { !existingThreadUrls.contains(it.url) }
-                uniqueThreads.forEach { existingThreadUrls.add(it.url) }
-                
-                if (uniqueThreads.isNotEmpty()) {
-                    allThreads.addAll(uniqueThreads)
-                    if (!_isRemoteSearchMode) {
-                        applyFiltersAndSort()
+            when (result) {
+                is Resource.Success -> {
+                    val newThreads = result.data
+                    if (newThreads.isEmpty()) {
+                        consecutiveEmptyPages++
+                        if (page == 0) {
+                            _errorMessage.value = getApplication<Application>().getString(R.string.error_fetch_threads)
+                        }
+                        
+                        if (consecutiveEmptyPages >= 3) {
+                            _hasMore.value = false
+                        } else {
+                            // 自動嘗試下一頁
+                            delay(500)
+                            loadMore()
+                        }
+                    } else {
+                        consecutiveEmptyPages = 0
+                        currentPage = page
+                        
+                        val uniqueThreads = newThreads.filter { !existingThreadUrls.contains(it.url) }
+                        uniqueThreads.forEach { existingThreadUrls.add(it.url) }
+                        
+                        if (uniqueThreads.isNotEmpty()) {
+                            allThreads.addAll(uniqueThreads)
+                            if (!_isRemoteSearchMode) {
+                                applyFiltersAndSort()
+                            }
+                        }
                     }
                 }
+                is Resource.Error -> {
+                    _errorMessage.value = result.message ?: "載入討論串失敗"
+                }
+                else -> {}
             }
             
             if (page == 0 && (_displayThreads.value?.isEmpty() == true)) {
@@ -120,14 +140,24 @@ class ThreadListViewModel(application: Application, private val board: Board) : 
             _isRemoteSearchMode = true
             _hasMore.value = false
             
-            val results = repository.searchThreads(board.url, currentSearchQuery)
+            val result = repository.searchThreads(board.url, currentSearchQuery)
             _isLoading.value = false
             
-            if (results.isNotEmpty()) {
-                _displayThreads.value = results
-            } else {
-                _displayThreads.value = emptyList()
-                _errorMessage.value = getApplication<Application>().getString(R.string.error_no_search_results)
+            when (result) {
+                is Resource.Success -> {
+                    val results = result.data
+                    if (results.isNotEmpty()) {
+                        _displayThreads.value = results
+                    } else {
+                        _displayThreads.value = emptyList()
+                        _errorMessage.value = getApplication<Application>().getString(R.string.error_no_search_results)
+                    }
+                }
+                is Resource.Error -> {
+                    _displayThreads.value = emptyList()
+                    _errorMessage.value = result.message ?: "搜尋失敗"
+                }
+                else -> {}
             }
         }
     }
@@ -149,6 +179,6 @@ class ThreadListViewModel(application: Application, private val board: Board) : 
             }
         }
 
-        _displayThreads.value = filtered.sortedByDescending { it.postNumber }
+        _displayThreads.value = filtered
     }
 }
