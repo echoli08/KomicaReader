@@ -19,5 +19,8 @@ app/build
 ai/reviews/
 ai/
 log/
+AGENTS.md
+Agent.md
+Gemini.md
 ScreenShot/Thumbs.db
 ScreenShot/cloudflare.jpg
