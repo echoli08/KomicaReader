@@ -11,10 +11,14 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import com.komica.reader.model.BoardCategory;
 import com.komica.reader.model.Thread;
@@ -261,6 +265,8 @@ public class KomicaService {
 
             KLog.d("Send Reply POST URL: " + postUrl + " | Resto: " + resto + " | Charset: " + charsetName);
 
+            Map<String, String> hiddenFields = new HashMap<>();
+
             // --- 1. Timerecord Cookie Validation & Warm-up ---
             // Pixmicat requires 'timerecord' cookie to calculate post time. Missing or too-fresh timerecord causes "Spambot" error.
             java.net.URL urlObj = new java.net.URL(postUrl);
@@ -294,6 +300,24 @@ public class KomicaService {
             
             try (Response response = client.newCall(formRequest).execute()) {
                 KLog.d("Form warm-up status: " + response.code());
+                // 繁體中文註解：解析回文表單的隱藏欄位，降低 Spambot 觸發機率
+                if (response.isSuccessful() && response.body() != null) {
+                    byte[] responseBytes = response.body().bytes();
+                    Document doc = Jsoup.parse(new ByteArrayInputStream(responseBytes), charsetName, formUrl);
+                    Element form = doc.selectFirst("form[action*=pixmicat]");
+                    if (form != null) {
+                        Elements inputs = form.select("input[type=hidden]");
+                        for (Element input : inputs) {
+                            String name = input.attr("name");
+                            if (!name.isEmpty()) {
+                                hiddenFields.put(name, input.attr("value"));
+                            }
+                        }
+                        KLog.d("Parsed hidden fields count: " + hiddenFields.size());
+                    } else {
+                        KLog.w("Reply form not found for hidden field parsing");
+                    }
+                }
             } catch (Exception e) {
                 KLog.e("Form warm-up failed: " + e.getMessage());
             }
@@ -349,8 +373,6 @@ public class KomicaService {
                 }
             }
 
-            Map<String, String> hiddenFields = new HashMap<>();
-
             // Simulate user typing delay (Increased to 8s for safety)
             try {
                 KLog.d("Simulating user typing delay, sleeping for 8000ms...");
@@ -362,13 +384,27 @@ public class KomicaService {
             MultipartBody.Builder builder = new MultipartBody.Builder()
                     .setType(MultipartBody.FORM);
 
+            // 繁體中文註解：先加入伺服器提供的隱藏欄位，保留反垃圾機制所需參數
+            Set<String> reservedFields = new HashSet<>(Arrays.asList(
+                    "mode", "resto", "name", "email", "sub", "com", "pwd",
+                    "upfile", "noimg", "send", "cf-turnstile-response",
+                    "MAX_FILE_SIZE", "upfile_path"
+            ));
+            for (Map.Entry<String, String> entry : hiddenFields.entrySet()) {
+                if (reservedFields.contains(entry.getKey())) continue;
+                addStringPart(builder, entry.getKey(), entry.getValue(), charset);
+            }
+
             // Set User Fields
             if (!hiddenFields.containsKey("mode")) addStringPart(builder, "mode", "regist", charset);
             
-            // Inject standard Pixmicat hidden fields since parsing was removed
-            // These are critical for passing anti-spam checks that look for specific form structure
-            addStringPart(builder, "MAX_FILE_SIZE", "5242880", charset);
-            addStringPart(builder, "upfile_path", "", charset);
+            // 繁體中文註解：使用表單提供的值，若缺失才回退預設值
+            String maxFileSize = hiddenFields.containsKey("MAX_FILE_SIZE")
+                    ? hiddenFields.get("MAX_FILE_SIZE") : "5242880";
+            String upfilePath = hiddenFields.containsKey("upfile_path")
+                    ? hiddenFields.get("upfile_path") : "";
+            addStringPart(builder, "MAX_FILE_SIZE", maxFileSize, charset);
+            addStringPart(builder, "upfile_path", upfilePath, charset);
             
             addStringPart(builder, "resto", String.valueOf(resto), charset);
             addStringPart(builder, "name", name != null ? name : "", charset);
