@@ -6,23 +6,19 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.widget.Button
 import android.widget.Toast
 import androidx.activity.viewModels
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
-import com.google.android.material.textfield.TextInputEditText
 import com.komica.reader.adapter.PostAdapter
 import com.komica.reader.databinding.ActivityThreadDetailBinding
 import com.komica.reader.model.Post
 import com.komica.reader.model.Thread
-import com.komica.reader.repository.KomicaRepository
 import com.komica.reader.service.KomicaService
-import com.komica.reader.ui.TurnstileDialog
 import com.komica.reader.util.KLog
 import com.komica.reader.viewmodel.ThreadDetailViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -31,7 +27,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.regex.Pattern
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class ThreadDetailActivity : AppCompatActivity() {
@@ -40,9 +35,16 @@ class ThreadDetailActivity : AppCompatActivity() {
     private var adapter: PostAdapter? = null
     private val viewModel: ThreadDetailViewModel by viewModels()
     private var currentThread: Thread? = null
-    
-    @Inject
-    lateinit var repository: KomicaRepository 
+
+    private val replyResultLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            // 繁體中文註解：回覆完成後重新整理討論串
+            viewModel.refresh()
+            scrollToBottom()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -79,7 +81,7 @@ class ThreadDetailActivity : AppCompatActivity() {
 
         binding.fabScrollDown.setOnClickListener { scrollToBottom() }
         binding.fabShare.setOnClickListener { shareThread() }
-        binding.fabReply.setOnClickListener { showReplyDialog() }
+        binding.fabReply.setOnClickListener { openReplyWebView() }
 
         binding.threadTitle.text = currentThread!!.title
 
@@ -117,34 +119,7 @@ class ThreadDetailActivity : AppCompatActivity() {
         }
     }
 
-    private fun showReplyDialog() {
-        val builder = AlertDialog.Builder(this)
-        val view = layoutInflater.inflate(R.layout.dialog_reply, null)
-
-        val editContent = view.findViewById<TextInputEditText>(R.id.editContent)
-        val btnCancel = view.findViewById<Button>(R.id.btnCancel)
-        val btnSend = view.findViewById<Button>(R.id.btnSend)
-
-        builder.setView(view)
-        val dialog = builder.create()
-
-        btnCancel.setOnClickListener { dialog.dismiss() }
-
-        btnSend.setOnClickListener {
-            val content = editContent.text?.toString() ?: ""
-            if (content.trim().isEmpty()) {
-                editContent.error = getString(R.string.msg_content_empty)
-                return@setOnClickListener
-            }
-
-            dialog.dismiss()
-            showTurnstileDialog(content)
-        }
-
-        dialog.show()
-    }
-
-    private fun showTurnstileDialog(content: String) {
+    private fun openReplyWebView() {
         val thread = currentThread ?: return
         
         // Use the explicit reply form URL to trigger timerecord cookie generation
@@ -164,27 +139,11 @@ class ThreadDetailActivity : AppCompatActivity() {
         }
 
         val formUrl = baseUrl + "pixmicat.php?res=" + res
-        KLog.d("Turnstile verification URL: $formUrl")
+        KLog.d("Reply WebView URL: $formUrl")
 
-        val dialog = TurnstileDialog(
-            this, formUrl,
-            object : TurnstileDialog.Callback {
-                override fun onVerified(token: String?) {
-                    // 繁體中文註解：統一交由 ViewModel 送出回文，避免 WebView 直接送出
-                    val normalizedToken = token?.takeIf { it.isNotBlank() }
-                    viewModel.sendReply(content, normalizedToken)
-                }
-
-                override fun onCancelled() {
-                    Toast.makeText(this@ThreadDetailActivity, R.string.action_cancel, Toast.LENGTH_SHORT).show()
-                }
-
-                override fun onError(error: String) {
-                    Toast.makeText(this@ThreadDetailActivity, getString(R.string.msg_error_prefix, error), Toast.LENGTH_LONG).show()
-                }
-            }
-        )
-        dialog.show()
+        // 繁體中文註解：回覆改用 WebView 讓使用者手動送出
+        val intent = ReplyWebViewActivity.createIntent(this, formUrl)
+        replyResultLauncher.launch(intent)
     }
 
     override fun onResume() {

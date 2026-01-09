@@ -29,6 +29,10 @@
             android:exported="false" />
 
         <activity
+            android:name=".ReplyWebViewActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".ImagePreviewActivity"
             android:exported="false"
             android:screenOrientation="fullSensor" />
