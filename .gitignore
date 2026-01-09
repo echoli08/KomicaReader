@@ -17,6 +17,7 @@ local.properties
 build
 app/build
 ai/reviews/
+ai/
 log/
 ScreenShot/Thumbs.db
 ScreenShot/cloudflare.jpg
