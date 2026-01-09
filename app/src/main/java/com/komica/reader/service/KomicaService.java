@@ -13,12 +13,9 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import com.komica.reader.model.BoardCategory;
 import com.komica.reader.model.Thread;
@@ -266,6 +263,8 @@ public class KomicaService {
             KLog.d("Send Reply POST URL: " + postUrl + " | Resto: " + resto + " | Charset: " + charsetName);
 
             Map<String, String> hiddenFields = new HashMap<>();
+            String submitFieldName = null;
+            String submitFieldValue = null;
 
             // --- 1. Timerecord Cookie Validation & Warm-up ---
             // Pixmicat requires 'timerecord' cookie to calculate post time. Missing or too-fresh timerecord causes "Spambot" error.
@@ -311,6 +310,15 @@ public class KomicaService {
                             String name = input.attr("name");
                             if (!name.isEmpty()) {
                                 hiddenFields.put(name, input.attr("value"));
+                            }
+                        }
+                        // 繁體中文註解：補抓送出按鈕的值，避免送出欄位不一致
+                        Element submit = form.selectFirst("input[type=submit]");
+                        if (submit != null) {
+                            String value = submit.attr("value");
+                            if (!value.isEmpty()) {
+                                submitFieldName = submit.attr("name");
+                                submitFieldValue = value;
                             }
                         }
                         KLog.d("Parsed hidden fields count: " + hiddenFields.size());
@@ -384,46 +392,57 @@ public class KomicaService {
             MultipartBody.Builder builder = new MultipartBody.Builder()
                     .setType(MultipartBody.FORM);
 
-            // 繁體中文註解：先加入伺服器提供的隱藏欄位，保留反垃圾機制所需參數
-            Set<String> reservedFields = new HashSet<>(Arrays.asList(
-                    "mode", "resto", "name", "email", "sub", "com", "pwd",
-                    "upfile", "noimg", "send", "cf-turnstile-response",
-                    "MAX_FILE_SIZE", "upfile_path"
-            ));
-            for (Map.Entry<String, String> entry : hiddenFields.entrySet()) {
-                if (reservedFields.contains(entry.getKey())) continue;
-                addStringPart(builder, entry.getKey(), entry.getValue(), charset);
-            }
+            // 繁體中文註解：先以表單隱藏欄位為基礎，避免缺少反垃圾參數
+            Map<String, String> postFields = new HashMap<>(hiddenFields);
 
-            // Set User Fields
-            if (!hiddenFields.containsKey("mode")) addStringPart(builder, "mode", "regist", charset);
-            
+            // 繁體中文註解：覆蓋使用者輸入欄位與必要欄位
+            postFields.put("mode", "regist");
+            postFields.put("resto", String.valueOf(resto));
+            postFields.put("name", name != null ? name : "");
+            postFields.put("email", email != null ? email : "");
+            postFields.put("sub", subject != null ? subject : "");
+            postFields.put("com", comment != null ? comment : "");
+            postFields.put("pwd", "komicareader");
+            postFields.put("noimg", "on"); // Checkbox, usually not hidden
+
             // 繁體中文註解：使用表單提供的值，若缺失才回退預設值
-            String maxFileSize = hiddenFields.containsKey("MAX_FILE_SIZE")
-                    ? hiddenFields.get("MAX_FILE_SIZE") : "5242880";
-            String upfilePath = hiddenFields.containsKey("upfile_path")
-                    ? hiddenFields.get("upfile_path") : "";
-            addStringPart(builder, "MAX_FILE_SIZE", maxFileSize, charset);
-            addStringPart(builder, "upfile_path", upfilePath, charset);
-            
-            addStringPart(builder, "resto", String.valueOf(resto), charset);
-            addStringPart(builder, "name", name != null ? name : "", charset);
-            addStringPart(builder, "email", email != null ? email : "", charset);
-            addStringPart(builder, "sub", subject != null ? subject : "", charset);
-            addStringPart(builder, "com", comment != null ? comment : "", charset);
-            addStringPart(builder, "pwd", "komicareader", charset);
-            addStringPart(builder, "noimg", "on", charset); // Checkbox, usually not hidden
-            
-            // Add standard send button field
-            String sendText = isGaia ? "送出" : "Submit";
-            addStringPart(builder, "send", sendText, charset);
+            String maxFileSize = postFields.containsKey("MAX_FILE_SIZE")
+                    ? postFields.get("MAX_FILE_SIZE") : "5242880";
+            String upfilePath = postFields.containsKey("upfile_path")
+                    ? postFields.get("upfile_path") : "";
+            postFields.put("MAX_FILE_SIZE", maxFileSize);
+            postFields.put("upfile_path", upfilePath);
+
+            // 繁體中文註解：優先使用表單的送出欄位名稱與值
+            if (submitFieldValue != null && !submitFieldValue.isEmpty()) {
+                String submitName = (submitFieldName != null && !submitFieldName.isEmpty())
+                        ? submitFieldName : "send";
+                postFields.put(submitName, submitFieldValue);
+                if (!"send".equals(submitName)) {
+                    postFields.remove("send");
+                }
+            } else {
+                String sendText = postFields.containsKey("send") ? postFields.get("send") : "";
+                if (sendText == null || sendText.isEmpty()) {
+                    sendText = isGaia ? "送出" : "Submit";
+                }
+                postFields.put("send", sendText);
+            }
 
             // Add Turnstile Token if provided
             if (turnstileToken != null && !turnstileToken.isEmpty()) {
-                addStringPart(builder, "cf-turnstile-response", turnstileToken, charset);
-                KLog.d("Added Turnstile Token: " + turnstileToken.substring(0, Math.min(10, turnstileToken.length())) + "...");
+                postFields.put("cf-turnstile-response", turnstileToken);
+                KLog.d("Added Turnstile Token length: " + turnstileToken.length());
             } else {
+                postFields.remove("cf-turnstile-response");
                 KLog.w("Warning: No Turnstile Token provided for reply. This might cause 503 error on protected boards.");
+            }
+
+            // 繁體中文註解：寫入所有欄位（排除檔案欄位）
+            for (Map.Entry<String, String> entry : postFields.entrySet()) {
+                if ("upfile".equals(entry.getKey())) continue;
+                String value = entry.getValue() != null ? entry.getValue() : "";
+                addStringPart(builder, entry.getKey(), value, charset);
             }
 
             // Add empty file part (Critical for anti-spam checks that expect multipart structure)
@@ -557,3 +576,4 @@ public class KomicaService {
         return KomicaParser.resolveUrl(baseUrl, href);
     }
 }
+
