@@ -19,6 +19,7 @@ import com.komica.reader.databinding.ActivityThreadDetailBinding
 import com.komica.reader.model.Post
 import com.komica.reader.model.Thread
 import com.komica.reader.service.KomicaService
+import com.komica.reader.util.getSerializableCompat
 import com.komica.reader.util.KLog
 import com.komica.reader.viewmodel.ThreadDetailViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -53,7 +54,7 @@ class ThreadDetailActivity : AppCompatActivity() {
 
         // Initialize currentThread from intent for initial UI state
         if (intent.hasExtra("thread")) {
-            currentThread = intent.getSerializableExtra("thread") as? Thread
+            currentThread = intent.getSerializableCompat("thread")
         } else if (intent.hasExtra("thread_url")) {
             val url = intent.getStringExtra("thread_url")
             val title = intent.getStringExtra("thread_title")

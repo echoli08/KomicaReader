@@ -20,6 +20,7 @@ import com.komica.reader.databinding.ActivityThreadListBinding
 import com.komica.reader.model.Board
 import com.komica.reader.model.Thread
 import com.komica.reader.util.FavoritesManager
+import com.komica.reader.util.getSerializableCompat
 import com.komica.reader.viewmodel.ThreadListViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -43,7 +44,7 @@ class ThreadListActivity : AppCompatActivity() {
 
         // favoritesManager injected by Hilt
         
-        currentBoard = intent.getSerializableExtra("board") as? Board
+        currentBoard = intent.getSerializableCompat("board")
 
         if (currentBoard == null) {
             finish()

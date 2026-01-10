@@ -164,12 +164,8 @@ class KomicaRepository private constructor(context: Context) {
 
         try {
             val result = KomicaService.FetchBoardsTask().call()
-            if (result != null) {
-                boardCategoryCache = result
-                Resource.Success(result)
-            } else {
-                Resource.Error(Exception("Failed to fetch boards: Empty response"))
-            }
+            boardCategoryCache = result
+            Resource.Success(result)
         } catch (e: Exception) {
             KLog.e("Error fetching boards: ${e.message}")
             Resource.Error(e)
@@ -179,11 +175,7 @@ class KomicaRepository private constructor(context: Context) {
     suspend fun fetchThreads(boardUrl: String, page: Int): Resource<List<Thread>> = withContext(Dispatchers.IO) {
         try {
             val result = KomicaService.FetchThreadsTask(boardUrl, page).call()
-            if (result != null) {
-                Resource.Success(result)
-            } else {
-                Resource.Error(Exception("Failed to fetch threads"))
-            }
+            Resource.Success(result)
         } catch (e: Exception) {
             KLog.e("Error fetching threads: ${e.message}")
             Resource.Error(e)
@@ -197,12 +189,8 @@ class KomicaRepository private constructor(context: Context) {
 
         try {
             val result = KomicaService.FetchThreadDetailTask(threadUrl).call()
-            if (result != null) {
-                threadDetailCache.put(threadUrl, result)
-                Resource.Success(result)
-            } else {
-                Resource.Error(Exception("Failed to fetch thread detail"))
-            }
+            threadDetailCache.put(threadUrl, result)
+            Resource.Success(result)
         } catch (e: Exception) {
             KLog.e("Error fetching thread detail: ${e.message}")
             Resource.Error(e)
@@ -212,11 +200,7 @@ class KomicaRepository private constructor(context: Context) {
     suspend fun searchThreads(boardUrl: String, query: String): Resource<List<Thread>> = withContext(Dispatchers.IO) {
         try {
             val result = KomicaService.BoardSearchTask(boardUrl, query).call()
-            if (result != null) {
-                Resource.Success(result)
-            } else {
-                Resource.Error(Exception("Search returned no results or failed"))
-            }
+            Resource.Success(result)
         } catch (e: Exception) {
             KLog.e("Error searching threads: ${e.message}")
             Resource.Error(e)
