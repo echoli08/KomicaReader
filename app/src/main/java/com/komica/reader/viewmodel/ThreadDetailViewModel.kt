@@ -120,7 +120,8 @@ class ThreadDetailViewModel @Inject constructor(
                         _threadDetail.value = thread
                         // Save to history upon successful load
                         historyRepository.addOrUpdateHistory(
-                            title = thread.title ?: "Untitled",
+                            // 繁體中文註解：title 為非空字串，直接使用
+                            title = thread.title,
                             url = thread.url,
                             thumbUrl = thread.imageUrl
                         )

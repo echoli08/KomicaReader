@@ -32,7 +32,8 @@ class GalleryAdapter(private val onImageClick: (Int) -> Unit) :
         fun bind(post: Post, position: Int, onImageClick: (Int) -> Unit) {
             postNumber.text = post.number.toString()
             
-            val thumbUrl = post.thumbnailUrl ?: ""
+            // 繁體中文註解：thumbnailUrl 已為非空字串，直接使用
+            val thumbUrl = post.thumbnailUrl
             
             if (thumbUrl.isNotEmpty()) {
                 Glide.with(itemView.context)

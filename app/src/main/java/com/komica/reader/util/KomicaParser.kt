@@ -114,16 +114,15 @@ object KomicaParser {
                 threadElement.selectFirst("span.warn_txt2")?.let {
                     val matcher = Pattern.compile("""(\d+)""").matcher(it.text())
                     if (matcher.find()) {
-                        omittedCount = matcher.group(1).toInt()
+                        // 繁體中文註解：避免 group 可能為空造成例外
+                        omittedCount = matcher.group(1)?.toIntOrNull() ?: 0
                     }
                 }
                 
                 replyCount = visibleReplyCount + omittedCount
 
-                if (replyPosts.isNotEmpty()) {
-                    replyPosts.last().selectFirst("span.now")?.let {
-                        lastReplyTime = it.text().trim()
-                    }
+                replyPosts.lastOrNull()?.selectFirst("span.now")?.let {
+                    lastReplyTime = it.text().trim()
                 }
             }
 
@@ -247,7 +246,10 @@ object KomicaParser {
 
             postElement.selectFirst("a[href*='res=']")?.let {
                 val matcher = Pattern.compile("res=(\\d+)").matcher(it.attr("href"))
-                if (matcher.find()) parentThreadNo = matcher.group(1).toInt()
+                if (matcher.find()) {
+                    // 繁體中文註解：安全解析父串號
+                    parentThreadNo = matcher.group(1)?.toIntOrNull() ?: 0
+                }
             }
 
             postElement.selectFirst(".qlink, .now a, .relink")?.let {

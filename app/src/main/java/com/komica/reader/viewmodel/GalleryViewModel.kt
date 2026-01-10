@@ -26,8 +26,9 @@ class GalleryViewModel @Inject constructor(
     private val _imagePosts = MutableLiveData<List<Post>>()
     val imagePosts: LiveData<List<Post>> = _imagePosts
     
+    // 繁體中文註解：imageUrl 在模型中為非空字串
     val allImageUrls: List<String>
-        get() = _imagePosts.value?.map { it.imageUrl ?: "" } ?: emptyList()
+        get() = _imagePosts.value?.map { it.imageUrl } ?: emptyList()
 
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading

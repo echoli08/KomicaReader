@@ -174,8 +174,9 @@ class ThreadListViewModel @Inject constructor(
             allThreads.toList()
         } else {
             allThreads.filter {
-                it.title?.lowercase()?.contains(currentSearchQuery) == true ||
-                it.contentPreview?.lowercase()?.contains(currentSearchQuery) == true
+                // 繁體中文註解：title/contentPreview 已為非空字串
+                it.title.lowercase().contains(currentSearchQuery) ||
+                it.contentPreview.lowercase().contains(currentSearchQuery)
             }
         }
 
