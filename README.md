@@ -54,6 +54,8 @@ Komica Reader 是一款專為瀏覽 Komica 匿名討論板設計的 Android 應�
     - **Lifecycle 升級**: `KomicaReaderApplication` 遷移至 `DefaultLifecycleObserver`，符合 Android 最新 API 標準。
 - **回覆體驗 (Reply)**:
     - **WebView 回覆**: 回覆改用 WebView 手動送出，並新增「回覆頁資源精簡」設定加速載入。
+- **建置 (Build)**:
+    - **Gradle 指派語法更新**: 修正空白指派語法的 deprecation，僅剩 Kapt 外掛內部警告需待升級處理。
 - **測試 (Testing)**:
     - 建立 `MainViewModelTest` 單元測試，引入 **MockK** 與 **Coroutines Test** 框架，確保核心業務邏輯的穩定性。
 
