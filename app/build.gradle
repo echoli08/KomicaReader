@@ -6,34 +6,34 @@ plugins {
 }
 
 android {
-    namespace 'com.komica.reader'
+    namespace = "com.komica.reader"
     compileSdk 34
 
     buildFeatures {
-        buildConfig true
-        viewBinding true
+        buildConfig = true
+        viewBinding = true
     }
 
     defaultConfig {
-        applicationId "com.komica.reader"
-        minSdk 24
-        targetSdk 34
-        versionCode 1260109
-        versionName "1.26.0109"
+        applicationId = "com.komica.reader"
+        minSdk = 24
+        targetSdk = 34
+        versionCode = 1260109
+        versionName = "1.26.0109"
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            minifyEnabled true
-            shrinkResources true
+            minifyEnabled = true
+            shrinkResources = true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
