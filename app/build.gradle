@@ -18,8 +18,8 @@ android {
         applicationId = "com.komica.reader"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1260109
-        versionName = "1.26.0109"
+        versionCode = 1260111
+        versionName = "1.26.0111"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
