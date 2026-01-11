@@ -9,4 +9,11 @@
         <item name="android:textColorSecondary">@color/text_secondary</item>
         <item name="actionBarSize">48dp</item>
     </style>
+
+    <style name="Widget.KomicaReader.SlideshowControlButton" parent="Widget.AppCompat.ImageButton">
+        <item name="android:background">@drawable/bg_slideshow_control</item>
+        <item name="android:padding">6dp</item>
+        <item name="android:scaleType">centerInside</item>
+        <item name="android:tint">@android:color/white</item>
+    </style>
 </resources>

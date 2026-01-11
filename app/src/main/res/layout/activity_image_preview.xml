@@ -27,27 +27,23 @@
 
     <ImageButton
         android:id="@+id/btn_slideshow_toggle"
+        style="@style/Widget.KomicaReader.SlideshowControlButton"
         android:layout_width="36dp"
         android:layout_height="36dp"
         android:layout_margin="8dp"
-        android:background="#80000000"
         android:contentDescription="@string/content_desc_slideshow_play"
-        android:padding="6dp"
-        android:scaleType="centerInside"
-        android:src="@android:drawable/ic_media_play"
+        android:src="@drawable/ic_slideshow_play"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <ImageButton
         android:id="@+id/btn_slideshow_speed"
+        style="@style/Widget.KomicaReader.SlideshowControlButton"
         android:layout_width="36dp"
         android:layout_height="36dp"
         android:layout_margin="8dp"
-        android:background="#80000000"
         android:contentDescription="@string/content_desc_slideshow_speed"
-        android:padding="6dp"
-        android:scaleType="centerInside"
-        android:src="@android:drawable/ic_menu_manage"
+        android:src="@drawable/ic_slideshow_speed"
         app:layout_constraintStart_toEndOf="@id/btn_slideshow_toggle"
         app:layout_constraintTop_toTopOf="@id/btn_slideshow_toggle" />
 

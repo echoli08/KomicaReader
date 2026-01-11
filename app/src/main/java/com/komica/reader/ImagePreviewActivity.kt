@@ -146,10 +146,11 @@ class ImagePreviewActivity : AppCompatActivity() {
     }
 
     private fun updateSlideshowToggle() {
+        // 繁體中文註解：改用統一風格的自訂圖示
         val iconRes = if (isSlideshowEnabled) {
-            android.R.drawable.ic_media_pause
+            R.drawable.ic_slideshow_pause
         } else {
-            android.R.drawable.ic_media_play
+            R.drawable.ic_slideshow_play
         }
         val descRes = if (isSlideshowEnabled) {
             R.string.content_desc_slideshow_pause
