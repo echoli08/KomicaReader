@@ -1,7 +1,10 @@
 ﻿package com.komica.reader
 
 import android.app.AlertDialog
+import android.app.WallpaperManager
 import android.content.SharedPreferences
+import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
@@ -9,6 +12,9 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
+import com.bumptech.glide.Glide
+import com.bumptech.glide.request.target.CustomTarget
+import com.bumptech.glide.request.transition.Transition
 import com.komica.reader.adapter.ImagePagerAdapter
 import com.komica.reader.databinding.ActivityImagePreviewBinding
 import kotlinx.coroutines.Job
@@ -38,7 +44,9 @@ class ImagePreviewActivity : AppCompatActivity() {
         isSlideshowEnabled = false
 
         if (imageUrls.isNotEmpty()) {
-            binding.viewPager.adapter = ImagePagerAdapter(imageUrls)
+            binding.viewPager.adapter = ImagePagerAdapter(imageUrls) { imageUrl ->
+                showImageOptionsDialog(imageUrl)
+            }
             binding.viewPager.setCurrentItem(currentPosition, false)
             updateCounter()
             updateSlideshowToggle()
@@ -195,6 +203,58 @@ class ImagePreviewActivity : AppCompatActivity() {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
+    private fun showImageOptionsDialog(imageUrl: String) {
+        val options = arrayOf(getString(R.string.action_set_wallpaper))
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.dialog_image_options_title))
+            .setItems(options) { _, which ->
+                if (which == 0) {
+                    setImageAsWallpaper(imageUrl)
+                }
+            }
+            .setNegativeButton(getString(R.string.action_cancel), null)
+            .show()
+    }
+
+    private fun setImageAsWallpaper(imageUrl: String) {
+        val wallpaperManager = WallpaperManager.getInstance(this)
+        // 繁體中文註解：使用 Glide 取得 Bitmap，完成後設定為桌布
+        Glide.with(this)
+            .asBitmap()
+            .load(imageUrl)
+            .into(object : CustomTarget<Bitmap>() {
+                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                    try {
+                        wallpaperManager.setBitmap(resource)
+                        Toast.makeText(
+                            this@ImagePreviewActivity,
+                            R.string.msg_set_wallpaper_success,
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            this@ImagePreviewActivity,
+                            R.string.msg_set_wallpaper_failed,
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+
+                override fun onLoadCleared(placeholder: Drawable?) {
+                    // 繁體中文註解：載入被清除時不需額外處理
+                }
+
+                override fun onLoadFailed(errorDrawable: Drawable?) {
+                    // 繁體中文註解：圖片載入失敗時提示使用者
+                    Toast.makeText(
+                        this@ImagePreviewActivity,
+                        R.string.msg_set_wallpaper_failed,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            })
+    }
+
     private fun updateKeepScreenOnState() {
         val keepScreenOnForSlideshow = prefs.getBoolean(KEY_KEEP_SCREEN_ON_SLIDESHOW, false)
         val keepScreenOnForPreview = prefs.getBoolean(KEY_KEEP_SCREEN_ON_PREVIEW, false)
@@ -214,7 +274,7 @@ class ImagePreviewActivity : AppCompatActivity() {
         private const val KEY_KEEP_SCREEN_ON_SLIDESHOW = "keep_screen_on_slideshow"
         private const val KEY_KEEP_SCREEN_ON_PREVIEW = "keep_screen_on_preview"
         private const val DEFAULT_SLIDESHOW_INTERVAL_SECONDS = 3
-        private val SLIDESHOW_INTERVAL_LABELS = arrayOf("關閉", "2 秒", "3 秒", "5 秒", "8 秒", "10 秒")
-        private val SLIDESHOW_INTERVAL_VALUES = intArrayOf(0, 2, 3, 5, 8, 10)
+        private val SLIDESHOW_INTERVAL_LABELS = arrayOf("關閉", "1 秒", "2 秒", "3 秒", "5 秒", "8 秒", "10 秒")
+        private val SLIDESHOW_INTERVAL_VALUES = intArrayOf(0, 1, 2, 3, 5, 8, 10)
     }
 }

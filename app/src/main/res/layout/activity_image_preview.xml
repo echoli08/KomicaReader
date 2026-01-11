@@ -45,6 +45,6 @@
         android:contentDescription="@string/content_desc_slideshow_speed"
         android:src="@drawable/ic_slideshow_speed"
         app:layout_constraintStart_toEndOf="@id/btn_slideshow_toggle"
-        app:layout_constraintTop_toTopOf="@id/btn_slideshow_toggle" />
+        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

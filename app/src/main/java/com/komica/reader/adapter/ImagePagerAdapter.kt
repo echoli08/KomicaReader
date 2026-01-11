@@ -9,7 +9,8 @@ import com.bumptech.glide.Glide
 import com.komica.reader.R
 
 class ImagePagerAdapter(
-    private val imageUrls: List<String>
+    private val imageUrls: List<String>,
+    private val onImageLongClick: (String) -> Unit
 ) : RecyclerView.Adapter<ImagePagerAdapter.ImageViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ImageViewHolder {
@@ -24,6 +25,11 @@ class ImagePagerAdapter(
             .load(imageUrl)
             .fitCenter()
             .into(holder.imageView)
+        holder.imageView.setOnLongClickListener {
+            // 繁體中文註解：長按圖片時提供設成桌布的選項
+            onImageLongClick(imageUrl)
+            true
+        }
     }
 
     override fun getItemCount(): Int = imageUrls.size

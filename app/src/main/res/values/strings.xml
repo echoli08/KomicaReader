@@ -91,6 +91,10 @@
     <string name="content_desc_slideshow_play">開始輪播</string>
     <string name="content_desc_slideshow_pause">暫停輪播</string>
     <string name="content_desc_slideshow_speed">調整輪播速度</string>
+    <string name="dialog_image_options_title">圖片選項</string>
+    <string name="action_set_wallpaper">設成桌布</string>
+    <string name="msg_set_wallpaper_success">桌布已更新</string>
+    <string name="msg_set_wallpaper_failed">設定桌布失敗</string>
     <string name="msg_slideshow_disabled">輪播已關閉，請至設定調整</string>
     <string name="msg_slideshow_interval_current">目前輪播：%1$d 秒</string>
 </resources>

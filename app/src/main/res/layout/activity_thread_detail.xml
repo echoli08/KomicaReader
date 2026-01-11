@@ -62,12 +62,12 @@
             android:orientation="vertical"
             android:padding="16dp"
             android:background="?android:attr/colorBackground">
+                <!-- 繁體中文註解：使用統一樣式處理預覽標題色彩與粗體 -->
                 <TextView
                     android:id="@+id/previewTitle"
+                    style="@style/TextAppearance.KomicaReader.PreviewTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textStyle="bold"
-                    android:textColor="?attr/colorPrimary"
                     android:layout_marginBottom="8dp"/>
                 <ScrollView
                     android:layout_width="match_parent"

@@ -215,8 +215,8 @@ class SettingsActivity : AppCompatActivity() {
         private const val KEY_KEEP_SCREEN_ON_PREVIEW = "keep_screen_on_preview"
         private val SIZE_LABELS = arrayOf("小", "中", "大", "特大", "超大")
         private val SIZE_VALUES = floatArrayOf(14f, 16f, 18f, 20f, 24f)
-        private val SLIDESHOW_INTERVAL_LABELS = arrayOf("關閉", "2 秒", "3 秒", "5 秒", "8 秒", "10 秒")
-        private val SLIDESHOW_INTERVAL_VALUES = intArrayOf(0, 2, 3, 5, 8, 10)
+        private val SLIDESHOW_INTERVAL_LABELS = arrayOf("關閉", "1 秒", "2 秒", "3 秒", "5 秒", "8 秒", "10 秒")
+        private val SLIDESHOW_INTERVAL_VALUES = intArrayOf(0, 1, 2, 3, 5, 8, 10)
         private const val DEFAULT_SLIDESHOW_INTERVAL_SECONDS = 3
     }
 }
