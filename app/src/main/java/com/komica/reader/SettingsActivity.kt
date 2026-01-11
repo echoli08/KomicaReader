@@ -5,11 +5,13 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.MenuItem
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.komica.reader.databinding.ActivitySettingsBinding
 import com.komica.reader.repository.KomicaRepository
+import com.komica.reader.util.FavoritesManager
 import com.komica.reader.util.ImageDownloadUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -20,6 +22,21 @@ class SettingsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySettingsBinding
     private lateinit var prefs: SharedPreferences
+    private val favoritesManager: FavoritesManager by lazy { FavoritesManager.getInstance(this) }
+
+    private val exportFavoritesLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        if (uri == null) return@registerForActivityResult
+        exportFavoritesToUri(uri)
+    }
+
+    private val importFavoritesLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@registerForActivityResult
+        importFavoritesFromUri(uri)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +61,8 @@ class SettingsActivity : AppCompatActivity() {
         binding.itemKeepScreenOnSlideshow.setOnClickListener { binding.switchKeepScreenOnSlideshow.toggle() }
         binding.itemKeepScreenOnPreview.setOnClickListener { binding.switchKeepScreenOnPreview.toggle() }
         binding.btnDownloadPath.setOnClickListener { showDownloadPathDialog() }
+        binding.btnExportFavorites.setOnClickListener { exportFavorites() }
+        binding.btnImportFavorites.setOnClickListener { importFavorites() }
 
         val isSlimEnabled = prefs.getBoolean(KEY_REPLY_WEBVIEW_SLIM, true)
         binding.switchReplyWebviewSlim.isChecked = isSlimEnabled
@@ -141,6 +160,104 @@ class SettingsActivity : AppCompatActivity() {
             .show()
     }
 
+    private fun exportFavorites() {
+        val favorites = favoritesManager.getFavorites()
+        if (favorites.isEmpty()) {
+            Toast.makeText(this, R.string.msg_export_favorites_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        // 繁體中文註解：建立匯出檔案，由使用者選擇儲存位置
+        exportFavoritesLauncher.launch(DEFAULT_FAVORITES_EXPORT_NAME)
+    }
+
+    private fun exportFavoritesToUri(uri: android.net.Uri) {
+        lifecycleScope.launch {
+            val success = withContext(Dispatchers.IO) {
+                try {
+                    val favorites = favoritesManager.getFavorites().toList().sorted()
+                    contentResolver.openOutputStream(uri)?.bufferedWriter(Charsets.UTF_8)?.use { writer ->
+                        favorites.forEach { writer.appendLine(it) }
+                    } ?: return@withContext false
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            }
+            val messageRes = if (success) {
+                R.string.msg_export_favorites_success
+            } else {
+                R.string.msg_export_favorites_failed
+            }
+            Toast.makeText(this@SettingsActivity, messageRes, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun importFavorites() {
+        // 繁體中文註解：從檔案匯入我的最愛
+        importFavoritesLauncher.launch(arrayOf("text/*"))
+    }
+
+    private fun importFavoritesFromUri(uri: android.net.Uri) {
+        lifecycleScope.launch {
+            val imported = withContext(Dispatchers.IO) {
+                try {
+                    contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { reader ->
+                        parseFavorites(reader.readText())
+                    } ?: emptySet()
+                } catch (e: Exception) {
+                    null
+                }
+            }
+
+            if (imported == null) {
+                Toast.makeText(this@SettingsActivity, R.string.msg_import_favorites_failed, Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            if (imported.isEmpty()) {
+                Toast.makeText(this@SettingsActivity, R.string.msg_import_favorites_empty, Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            showImportFavoritesDialog(imported)
+        }
+    }
+
+    private fun showImportFavoritesDialog(imported: Set<String>) {
+        val options = arrayOf(
+            getString(R.string.action_import_favorites_merge),
+            getString(R.string.action_import_favorites_replace)
+        )
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.dialog_import_favorites_title))
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> applyImportedFavorites(imported, true)
+                    1 -> applyImportedFavorites(imported, false)
+                }
+            }
+            .setNegativeButton(getString(R.string.action_cancel), null)
+            .show()
+    }
+
+    private fun applyImportedFavorites(imported: Set<String>, shouldMerge: Boolean) {
+        val result = if (shouldMerge) {
+            val merged = HashSet(favoritesManager.getFavorites())
+            merged.addAll(imported)
+            merged
+        } else {
+            imported
+        }
+        // 繁體中文註解：以匯入結果覆蓋或合併現有我的最愛
+        favoritesManager.replaceFavorites(result)
+        Toast.makeText(this, R.string.msg_import_favorites_success, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun parseFavorites(content: String): Set<String> {
+        return content.lineSequence()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .toSet()
+    }
+
     private fun showClearCacheDialog() {
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.dialog_clear_cache_title))
@@ -218,5 +335,6 @@ class SettingsActivity : AppCompatActivity() {
         private val SLIDESHOW_INTERVAL_LABELS = arrayOf("關閉", "1 秒", "2 秒", "3 秒", "5 秒", "8 秒", "10 秒")
         private val SLIDESHOW_INTERVAL_VALUES = intArrayOf(0, 1, 2, 3, 5, 8, 10)
         private const val DEFAULT_SLIDESHOW_INTERVAL_SECONDS = 3
+        private const val DEFAULT_FAVORITES_EXPORT_NAME = "komica_favorites.txt"
     }
 }

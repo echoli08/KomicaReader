@@ -2,14 +2,25 @@
 
 import android.app.AlertDialog
 import android.app.WallpaperManager
+import android.Manifest
+import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
+import android.net.Uri
 import android.os.Bundle
+import android.os.Build
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
@@ -17,20 +28,48 @@ import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import com.komica.reader.adapter.ImagePagerAdapter
 import com.komica.reader.databinding.ActivityImagePreviewBinding
+import com.komica.reader.util.ImageDownloadUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import kotlin.math.abs
 
 class ImagePreviewActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityImagePreviewBinding
     private lateinit var prefs: SharedPreferences
     private var imageUrls: List<String> = emptyList()
+    private var displayImageUrls: List<String> = emptyList()
     private var currentPosition: Int = 0
+    private var isLoopEnabled: Boolean = false
     private var pageChangeCallback: ViewPager2.OnPageChangeCallback? = null
     private var slideshowJob: Job? = null
     private var isSlideshowEnabled: Boolean = false
+    private var pendingDownloadUrl: String? = null
+    private var isVerticalSwipeHandled = false
+    private var gestureDetector: GestureDetector? = null
+    private var isTapHandled = false
+
+    private val requestStoragePermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        // 繁體中文註解：儲存權限核准後繼續下載圖片
+        val url = pendingDownloadUrl
+        pendingDownloadUrl = null
+        if (isGranted && url != null) {
+            downloadImage(url)
+        } else if (!isGranted) {
+            Toast.makeText(
+                this,
+                R.string.msg_storage_permission_required,
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,10 +83,17 @@ class ImagePreviewActivity : AppCompatActivity() {
         isSlideshowEnabled = false
 
         if (imageUrls.isNotEmpty()) {
-            binding.viewPager.adapter = ImagePagerAdapter(imageUrls) { imageUrl ->
+            isLoopEnabled = imageUrls.size > 1
+            displayImageUrls = if (isLoopEnabled) {
+                listOf(imageUrls.last()) + imageUrls + listOf(imageUrls.first())
+            } else {
+                imageUrls
+            }
+            binding.viewPager.adapter = ImagePagerAdapter(displayImageUrls) { imageUrl ->
                 showImageOptionsDialog(imageUrl)
             }
-            binding.viewPager.setCurrentItem(currentPosition, false)
+            val initialPosition = if (isLoopEnabled) currentPosition + 1 else currentPosition
+            binding.viewPager.setCurrentItem(initialPosition, false)
             updateCounter()
             updateSlideshowToggle()
             binding.btnSlideshowToggle.visibility = if (imageUrls.size > 1) View.VISIBLE else View.GONE
@@ -58,10 +104,22 @@ class ImagePreviewActivity : AppCompatActivity() {
                 true
             }
             binding.btnSlideshowSpeed.setOnClickListener { showSlideshowSpeedDialog() }
+            setupPreviewGestureControls()
 
             pageChangeCallback = object : ViewPager2.OnPageChangeCallback() {
                 override fun onPageSelected(position: Int) {
                     super.onPageSelected(position)
+                    if (isLoopEnabled) {
+                        val lastPosition = displayImageUrls.size - 1
+                        when (position) {
+                            0 -> binding.viewPager.post {
+                                binding.viewPager.setCurrentItem(displayImageUrls.size - 2, false)
+                            }
+                            lastPosition -> binding.viewPager.post {
+                                binding.viewPager.setCurrentItem(1, false)
+                            }
+                        }
+                    }
                     updateCounter()
                     if (isSlideshowEnabled) {
                         restartSlideshow()
@@ -98,8 +156,13 @@ class ImagePreviewActivity : AppCompatActivity() {
     }
 
     private fun updateCounter() {
-        val current = binding.viewPager.currentItem + 1
         val total = imageUrls.size
+        val currentIndex = if (isLoopEnabled) {
+            getRealPosition(binding.viewPager.currentItem)
+        } else {
+            binding.viewPager.currentItem.coerceAtLeast(0)
+        }
+        val current = currentIndex + 1
         binding.imageCounter.text = "$current / $total"
     }
 
@@ -115,8 +178,7 @@ class ImagePreviewActivity : AppCompatActivity() {
             while (isActive) {
                 delay(intervalSeconds * 1000L)
                 if (imageUrls.isEmpty()) continue
-                val next = (binding.viewPager.currentItem + 1) % imageUrls.size
-                binding.viewPager.setCurrentItem(next, true)
+                showNextImage()
             }
         }
     }
@@ -204,16 +266,99 @@ class ImagePreviewActivity : AppCompatActivity() {
     }
 
     private fun showImageOptionsDialog(imageUrl: String) {
-        val options = arrayOf(getString(R.string.action_set_wallpaper))
+        val options = arrayOf(
+            getString(R.string.action_download_image),
+            getString(R.string.action_share_image),
+            getString(R.string.action_set_wallpaper)
+        )
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.dialog_image_options_title))
             .setItems(options) { _, which ->
-                if (which == 0) {
-                    setImageAsWallpaper(imageUrl)
+                when (which) {
+                    0 -> downloadImage(imageUrl)
+                    1 -> shareImage(imageUrl)
+                    2 -> setImageAsWallpaper(imageUrl)
                 }
             }
             .setNegativeButton(getString(R.string.action_cancel), null)
             .show()
+    }
+
+    private fun setupPreviewGestureControls() {
+        val touchSlop = ViewConfiguration.get(this).scaledTouchSlop
+        val swipeThreshold = touchSlop * 3
+        gestureDetector = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onDown(e: MotionEvent): Boolean {
+                isVerticalSwipeHandled = false
+                isTapHandled = false
+                return true
+            }
+
+            override fun onSingleTapUp(e: MotionEvent): Boolean {
+                // 繁體中文註解：點擊左右半邊切換上一張或下一張
+                if (e.x < binding.viewPager.width / 2f) {
+                    showPreviousImage()
+                } else {
+                    showNextImage()
+                }
+                isTapHandled = true
+                return true
+            }
+
+            override fun onScroll(
+                e1: MotionEvent?,
+                e2: MotionEvent,
+                distanceX: Float,
+                distanceY: Float
+            ): Boolean {
+                if (e1 == null) return false
+                val deltaX = e2.x - e1.x
+                val deltaY = e2.y - e1.y
+                val isVerticalSwipe = abs(deltaY) > abs(deltaX) * 1.2f && abs(deltaY) > swipeThreshold
+                if (!isVerticalSwipeHandled && isVerticalSwipe) {
+                    // 繁體中文註解：上下滑動切換圖片
+                    if (deltaY > 0) {
+                        showPreviousImage()
+                    } else {
+                        showNextImage()
+                    }
+                    isVerticalSwipeHandled = true
+                    return true
+                }
+                return false
+            }
+        })
+        binding.touchOverlay.setOnTouchListener { _, event ->
+            if (imageUrls.size <= 1) {
+                return@setOnTouchListener false
+            }
+            if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                isVerticalSwipeHandled = false
+                isTapHandled = false
+            }
+            val handledByDetector = gestureDetector?.onTouchEvent(event) == true
+            if (isVerticalSwipeHandled || isTapHandled) {
+                return@setOnTouchListener true
+            }
+            val handledByPager = binding.viewPager.dispatchTouchEvent(event)
+            handledByDetector || handledByPager
+        }
+    }
+
+    private fun showNextImage() {
+        if (displayImageUrls.isEmpty()) return
+        val next = binding.viewPager.currentItem + 1
+        if (next < displayImageUrls.size) {
+            binding.viewPager.setCurrentItem(next, true)
+        }
+    }
+
+    private fun showPreviousImage() {
+        if (displayImageUrls.isEmpty()) return
+        val previous = binding.viewPager.currentItem - 1
+        if (previous >= 0) {
+            binding.viewPager.setCurrentItem(previous, true)
+        }
     }
 
     private fun setImageAsWallpaper(imageUrl: String) {
@@ -253,6 +398,118 @@ class ImagePreviewActivity : AppCompatActivity() {
                     ).show()
                 }
             })
+    }
+
+    private fun shareImage(imageUrl: String) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                // 繁體中文註解：先下載成暫存檔再分享給其他應用程式
+                val file: File = Glide.with(this@ImagePreviewActivity)
+                    .asFile()
+                    .load(imageUrl)
+                    .submit()
+                    .get()
+
+                val uri: Uri = FileProvider.getUriForFile(
+                    this@ImagePreviewActivity,
+                    "${applicationContext.packageName}.fileprovider",
+                    file
+                )
+
+                withContext(Dispatchers.Main) {
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "image/*"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    startActivity(Intent.createChooser(shareIntent, getString(R.string.action_share_image)))
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@ImagePreviewActivity,
+                        R.string.msg_share_image_failed,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+    }
+
+    private fun downloadImage(imageUrl: String) {
+        if (needsLegacyStoragePermission() && !hasLegacyStoragePermission()) {
+            // 繁體中文註解：Android 10 以下需先取得儲存權限
+            pendingDownloadUrl = imageUrl
+            requestStoragePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            return
+        }
+        lifecycleScope.launch {
+            val resultPath = withContext(Dispatchers.IO) {
+                try {
+                    // 繁體中文註解：預覽畫面下載使用固定資料夾名稱
+                    val relativePath = ImageDownloadUtils.getDownloadRelativePath(
+                        this@ImagePreviewActivity,
+                        "preview"
+                    )
+                    val extension = extractImageExtension(imageUrl)
+                    val fileName = "image_" + System.currentTimeMillis() + "." + extension
+                    val mimeType = ImageDownloadUtils.getMimeTypeFromExtension(extension)
+                    val tempFile = Glide.with(this@ImagePreviewActivity)
+                        .asFile()
+                        .load(imageUrl)
+                        .submit()
+                        .get()
+                    // 繁體中文註解：透過 MediaStore 寫入公開相簿
+                    val uri = ImageDownloadUtils.saveImageToMediaStore(
+                        this@ImagePreviewActivity,
+                        tempFile,
+                        fileName,
+                        relativePath,
+                        mimeType
+                    )
+                    if (uri == null) null else relativePath
+                } catch (e: Exception) {
+                    null
+                }
+            }
+
+            if (resultPath == null) {
+                Toast.makeText(this@ImagePreviewActivity, R.string.msg_download_image_failed, Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(
+                    this@ImagePreviewActivity,
+                    getString(R.string.msg_download_image_success, resultPath),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    private fun extractImageExtension(imageUrl: String): String {
+        val lastSegment = Uri.parse(imageUrl).lastPathSegment ?: ""
+        val extension = lastSegment.substringAfterLast('.', "")
+        return if (extension.isBlank()) "jpg" else extension
+    }
+
+    private fun getRealPosition(position: Int): Int {
+        if (!isLoopEnabled) return position
+        val lastIndex = imageUrls.size - 1
+        return when (position) {
+            0 -> lastIndex
+            displayImageUrls.size - 1 -> 0
+            else -> position - 1
+        }
+    }
+
+    private fun needsLegacyStoragePermission(): Boolean {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
+    }
+
+    private fun hasLegacyStoragePermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun updateKeepScreenOnState() {

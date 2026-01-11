@@ -65,6 +65,11 @@
     <string name="setting_download_path_value_pictures">公開圖片資料夾</string>
     <string name="setting_download_path_value_downloads">公開下載資料夾</string>
     <string name="dialog_download_path_title">選擇下載路徑</string>
+    <string name="setting_favorites_backup_section">我的最愛備份</string>
+    <string name="setting_export_favorites">匯出我的最愛</string>
+    <string name="setting_export_favorites_desc">將我的最愛備份成檔案</string>
+    <string name="setting_import_favorites">匯入我的最愛</string>
+    <string name="setting_import_favorites_desc">從檔案還原我的最愛</string>
 
     <string name="setting_cache_section">快取設定</string>
     <string name="setting_clear_cache">清除快取</string>
@@ -73,6 +78,15 @@
     <string name="dialog_clear_cache_message">確定要清除圖片與網頁快取嗎？</string>
     <string name="msg_clear_cache_success">快取已清除</string>
     <string name="msg_clear_cache_failed">快取清除失敗</string>
+    <string name="msg_export_favorites_success">已匯出我的最愛</string>
+    <string name="msg_export_favorites_failed">匯出我的最愛失敗</string>
+    <string name="msg_import_favorites_success">已匯入我的最愛</string>
+    <string name="msg_import_favorites_failed">匯入我的最愛失敗</string>
+    <string name="msg_import_favorites_empty">匯入檔案沒有有效資料</string>
+    <string name="msg_export_favorites_empty">目前沒有我的最愛可匯出</string>
+    <string name="dialog_import_favorites_title">匯入我的最愛</string>
+    <string name="action_import_favorites_merge">合併匯入</string>
+    <string name="action_import_favorites_replace">覆蓋匯入</string>
 
     <string name="action_gallery">圖片牆</string>
     <string name="action_download_images">批次下載</string>
@@ -95,6 +109,7 @@
     <string name="action_set_wallpaper">設成桌布</string>
     <string name="msg_set_wallpaper_success">桌布已更新</string>
     <string name="msg_set_wallpaper_failed">設定桌布失敗</string>
+    <string name="msg_storage_permission_required">需要儲存權限才能下載圖片</string>
     <string name="msg_slideshow_disabled">輪播已關閉，請至設定調整</string>
     <string name="msg_slideshow_interval_current">目前輪播：%1$d 秒</string>
 </resources>

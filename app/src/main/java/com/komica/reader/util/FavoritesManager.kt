@@ -23,6 +23,13 @@ class FavoritesManager private constructor(context: Context) {
     }
 
     @Synchronized
+    fun replaceFavorites(newFavorites: Set<String>) {
+        cachedFavorites = HashSet(newFavorites)
+        // 繁體中文註解：完整覆蓋最愛清單，確保還原內容一致
+        sharedPreferences.edit().putStringSet(KEY_FAVORITES, cachedFavorites).commit()
+    }
+
+    @Synchronized
     fun toggleFavorite(boardUrl: String) {
         val newFavorites = HashSet(cachedFavorites)
         if (newFavorites.contains(boardUrl)) {

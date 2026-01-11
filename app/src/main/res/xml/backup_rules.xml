@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- 繁體中文註解：確保我的最愛偏好設定納入備份，避免重裝遺失 -->
+    <include domain="sharedpref" path="KomicaFavorites.xml" />
+</full-backup-content>
