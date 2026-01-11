@@ -45,6 +45,8 @@ class GalleryAdapter(
             if (thumbUrl.isNotEmpty()) {
                 Glide.with(itemView.context)
                     .load(thumbUrl)
+                    // 繁體中文註解：縮圖限制尺寸，避免載入過大圖片
+                    .override(300, 300)
                     .centerCrop()
                     .into(image)
             } else {

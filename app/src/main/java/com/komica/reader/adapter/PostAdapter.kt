@@ -11,6 +11,7 @@ import android.text.TextPaint
 import android.text.style.ClickableSpan
 import android.text.style.ForegroundColorSpan
 import android.util.Patterns
+import android.util.LruCache
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
@@ -21,18 +22,22 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DecodeFormat
 import com.komica.reader.R
 import com.komica.reader.model.Post
 import java.util.regex.Pattern
 
 class PostAdapter(
     private val posts: List<Post>,
-    private val interactionListener: OnQuoteInteractionListener?
+    private val interactionListener: OnQuoteInteractionListener?,
+    private val contentTextSize: Float
 ) : RecyclerView.Adapter<PostAdapter.PostViewHolder>() {
 
     private val allImageUrls: MutableList<String> = ArrayList()
     private val postToImageIndexMap: MutableMap<Int, Int> = HashMap()
     private val postIdToPositionMap: MutableMap<String, Int> = HashMap()
+    // 繁體中文註解：快取已解析的引文內容，減少重複解析耗時
+    private val spannableCache: LruCache<String, SpannableString> = LruCache(100)
     private var recyclerView: RecyclerView? = null
 
     interface OnQuoteInteractionListener {
@@ -160,6 +165,16 @@ class PostAdapter(
         return spannable
     }
 
+    private fun getSpannableContent(context: android.content.Context, content: String): SpannableString {
+        val cached = spannableCache.get(content)
+        if (cached != null) {
+            return cached
+        }
+        val created = createSpannableContent(context, content)
+        spannableCache.put(content, created)
+        return created
+    }
+
     inner class PostViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val postNumber: TextView = itemView.findViewById(R.id.postNumber)
         private val postAuthor: TextView = itemView.findViewById(R.id.postAuthor)
@@ -169,13 +184,9 @@ class PostAdapter(
         private val handler = Handler(Looper.getMainLooper())
         private var longPressRunnable: Runnable? = null
         private var isLongPressed = false
-        private val contentTextSize: Float
         private var pressedSpan: ClickableSpan? = null
 
         init {
-            val prefs = itemView.context.getSharedPreferences("KomicaReader", android.content.Context.MODE_PRIVATE)
-            contentTextSize = prefs.getFloat("post_font_size", 16f)
-
             itemView.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
                 override fun onViewAttachedToWindow(v: View) {}
                 override fun onViewDetachedFromWindow(v: View) {
@@ -202,7 +213,7 @@ class PostAdapter(
                 postContent.visibility = View.GONE
                 postContent.setOnTouchListener(null)
             } else {
-                val spannable = createSpannableContent(itemView.context, post.content)
+                val spannable = getSpannableContent(itemView.context, post.content)
                 postContent.text = spannable
                 postContent.movementMethod = null
                 postContent.visibility = View.VISIBLE
@@ -219,6 +230,9 @@ class PostAdapter(
                 postImage.visibility = View.VISIBLE
                 Glide.with(itemView.context)
                     .load(displayImageUrl)
+                    // 繁體中文註解：限制圖片解碼尺寸與格式，降低記憶體占用
+                    .override(600, 600)
+                    .format(DecodeFormat.PREFER_RGB_565)
                     .error(android.R.drawable.ic_menu_gallery)
                     .placeholder(android.R.drawable.ic_menu_gallery)
                     .into(postImage)

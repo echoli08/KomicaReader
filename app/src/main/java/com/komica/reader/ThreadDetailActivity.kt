@@ -157,6 +157,9 @@ class ThreadDetailActivity : AppCompatActivity() {
 
     private fun updateUI(thread: Thread) {
         val posts = thread.posts
+        // 繁體中文註解：預先讀取設定，避免 ViewHolder 內重複讀取
+        val prefs = getSharedPreferences("KomicaReader", MODE_PRIVATE)
+        val contentTextSize = prefs.getFloat("post_font_size", 16f)
         adapter = PostAdapter(posts, object : PostAdapter.OnQuoteInteractionListener {
             override fun onImageClick(imageIndex: Int, imageUrls: List<String>) {
                 val intent = Intent(this@ThreadDetailActivity, ImagePreviewActivity::class.java)
@@ -182,7 +185,7 @@ class ThreadDetailActivity : AppCompatActivity() {
             override fun onQuoteReleased() {
                 binding.previewCard.visibility = View.GONE
             }
-        })
+        }, contentTextSize)
 
         binding.recyclerView.adapter = adapter
     }
