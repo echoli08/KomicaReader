@@ -15,7 +15,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="設定"
+            android:text="@string/setting_title"
             android:layout_gravity="center"
             android:textColor="@android:color/white"
             android:textSize="18sp"
@@ -31,7 +31,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="外觀設定"
+            android:text="@string/setting_appearance_section"
             android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="?android:attr/textColorPrimary"
@@ -51,7 +51,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="主題列表字體大小"
+                android:text="@string/setting_theme_list_font_size"
                 android:textSize="16sp"
                 android:textColor="?android:attr/textColorPrimary"/>
 
@@ -59,7 +59,7 @@
                 android:id="@+id/tv_font_size_list_value"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="正常"
+                android:text="@string/setting_font_size_normal"
                 android:textSize="14sp"
                 android:textColor="?android:attr/textColorSecondary"
                 android:layout_marginTop="4dp"/>
@@ -79,7 +79,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="討論串內文字體大小"
+                android:text="@string/setting_post_font_size"
                 android:textSize="16sp"
                 android:textColor="?android:attr/textColorPrimary"/>
 
@@ -87,7 +87,7 @@
                 android:id="@+id/tv_font_size_post_value"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="正常"
+                android:text="@string/setting_font_size_normal"
                 android:textSize="14sp"
                 android:textColor="?android:attr/textColorSecondary"
                 android:layout_marginTop="4dp"/>
@@ -141,6 +141,155 @@
                 android:layout_marginTop="4dp"/>
         </LinearLayout>
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/setting_image_section"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"/>
+
+        <LinearLayout
+            android:id="@+id/btn_slideshow_interval"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingVertical="12dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/setting_slideshow_interval"
+                android:textSize="16sp"
+                android:textColor="?android:attr/textColorPrimary"/>
+
+            <TextView
+                android:id="@+id/tv_slideshow_interval_value"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/setting_slideshow_interval_default"
+                android:textSize="14sp"
+                android:textColor="?android:attr/textColorSecondary"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/item_keep_screen_on_slideshow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingVertical="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/setting_keep_screen_on_slideshow"
+                    android:textSize="16sp"
+                    android:textColor="?android:attr/textColorPrimary"/>
+
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/switch_keep_screen_on_slideshow"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/setting_keep_screen_on_slideshow_desc"
+                android:textSize="14sp"
+                android:textColor="?android:attr/textColorSecondary"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/item_keep_screen_on_preview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingVertical="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/setting_keep_screen_on_preview"
+                    android:textSize="16sp"
+                    android:textColor="?android:attr/textColorPrimary"/>
+
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/switch_keep_screen_on_preview"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/setting_keep_screen_on_preview_desc"
+                android:textSize="14sp"
+                android:textColor="?android:attr/textColorSecondary"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/setting_cache_section"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp"/>
+
+        <LinearLayout
+            android:id="@+id/btn_clear_cache"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="?android:attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:paddingVertical="12dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/setting_clear_cache"
+                android:textSize="16sp"
+                android:textColor="?android:attr/textColorPrimary"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/setting_clear_cache_desc"
+                android:textSize="14sp"
+                android:textColor="?android:attr/textColorSecondary"
+                android:layout_marginTop="4dp"/>
+        </LinearLayout>
+
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
@@ -161,12 +310,12 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="關於軟體"
+                android:text="@string/setting_about"
                 android:textSize="16sp"
                 android:textColor="?android:attr/textColorPrimary"/>
         </LinearLayout>
 
     </LinearLayout>
-    
+
 
     </LinearLayout>

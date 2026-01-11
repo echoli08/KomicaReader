@@ -25,4 +25,17 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <ImageButton
+        android:id="@+id/btn_slideshow_toggle"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_margin="8dp"
+        android:background="#80000000"
+        android:contentDescription="@string/content_desc_slideshow_play"
+        android:padding="6dp"
+        android:scaleType="centerInside"
+        android:src="@android:drawable/ic_media_play"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

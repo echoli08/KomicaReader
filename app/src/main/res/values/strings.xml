@@ -3,17 +3,17 @@
     <string name="app_name">Komica Reader</string>
     <string name="welcome_message">Welcome to Komica Reader</string>
     <string name="expand">Expand</string>
-    
+
     <!-- Error Messages -->
-    <string name="error_fetch_threads">無法取得資料或該板塊目前沒有主題</string>
-    <string name="error_no_search_results">找不到符合的搜尋結果</string>
+    <string name="error_fetch_threads">無法取得討論串資料，請稍後再試</string>
+    <string name="error_no_search_results">找不到符合條件的搜尋結果</string>
     <string name="error_load_thread_failed">載入討論串失敗</string>
-    <string name="error_open_link">無法開啟網址: %1$s</string>
-    
+    <string name="error_open_link">無法開啟連結: %1$s</string>
+
     <!-- Content Placeholders -->
     <string name="text_untitled">Untitled</string>
     <string name="text_anonymous">Anonymous</string>
-    <string name="text_reply_to">回覆於 No. %1$d</string>
+    <string name="text_reply_to">回覆 No. %1$d</string>
     <string name="text_no_content">(無內容)</string>
     <string name="text_no_text_content">(無文字內容)</string>
     <string name="text_unknown_author">Unknown</string>
@@ -24,7 +24,7 @@
     <string name="action_retry">重試</string>
     <string name="action_share_thread">分享討論串</string>
     <string name="action_share_image">分享圖片</string>
-    <string name="action_cancel">已取消</string>
+    <string name="action_cancel">取消</string>
 
     <!-- Messages -->
     <string name="msg_loading">Loading...</string>
@@ -33,12 +33,53 @@
     <string name="msg_content_empty">內容不能為空</string>
     <string name="msg_error_prefix">錯誤: %1$s</string>
     <string name="msg_share_image_failed">分享圖片失敗</string>
-    
+
     <!-- Formats -->
     <string name="fmt_post_number">No. %1$d %2$s</string>
     <string name="title_reply_webview">回覆</string>
-    <string name="msg_reply_webview_missing_url">回覆網址無效</string>
+    <string name="msg_reply_webview_missing_url">回覆網址不存在</string>
+
+    <!-- Settings -->
+    <string name="setting_title">設定</string>
+    <string name="setting_appearance_section">外觀設定</string>
+    <string name="setting_theme_list_font_size">主題列表字體大小</string>
+    <string name="setting_post_font_size">討論串內容字體大小</string>
+    <string name="setting_font_size_normal">正常</string>
+    <string name="setting_about">關於本程式</string>
     <string name="setting_reply_section">回覆設定</string>
     <string name="setting_reply_webview_slim">回覆頁資源精簡</string>
     <string name="setting_reply_webview_slim_desc">阻擋圖片與影音，縮短載入時間（驗證仍會載入）</string>
+
+    <string name="setting_image_section">圖片設定</string>
+    <string name="setting_slideshow_interval">自動輪播速度</string>
+    <string name="setting_slideshow_interval_desc">設定圖片輪播間隔秒數</string>
+    <string name="dialog_slideshow_interval_title">選擇輪播速度</string>
+    <string name="setting_slideshow_interval_default">3 秒</string>
+    <string name="setting_keep_screen_on_slideshow">輪播時保持螢幕常亮</string>
+    <string name="setting_keep_screen_on_slideshow_desc">播放輪播時避免螢幕休眠</string>
+    <string name="setting_keep_screen_on_preview">預覽時保持螢幕常亮</string>
+    <string name="setting_keep_screen_on_preview_desc">一般預覽也保持螢幕不進入休眠</string>
+
+    <string name="setting_cache_section">快取設定</string>
+    <string name="setting_clear_cache">清除快取</string>
+    <string name="setting_clear_cache_desc">清除圖片與網頁快取</string>
+    <string name="dialog_clear_cache_title">清除快取</string>
+    <string name="dialog_clear_cache_message">確定要清除圖片與網頁快取嗎？</string>
+    <string name="msg_clear_cache_success">快取已清除</string>
+    <string name="msg_clear_cache_failed">快取清除失敗</string>
+
+    <string name="action_gallery">圖片牆</string>
+    <string name="action_download_images">批次下載</string>
+    <string name="dialog_download_images_title">批次下載圖片</string>
+    <string name="dialog_download_images_message">共 %1$d 張圖片，將下載到 App 圖片資料夾，是否繼續？</string>
+    <string name="msg_download_images_start">開始下載 %1$d 張圖片</string>
+    <string name="msg_download_images_empty">此討論串沒有圖片</string>
+    <string name="msg_download_images_done">已下載 %1$d 張，略過 %2$d 張\n位置：%3$s</string>
+    <string name="action_confirm">確定</string>
+
+    <!-- Image Preview -->
+    <string name="content_desc_slideshow_play">開始輪播</string>
+    <string name="content_desc_slideshow_pause">暫停輪播</string>
+    <string name="msg_slideshow_disabled">輪播已關閉，請至設定調整</string>
+    <string name="msg_slideshow_interval_current">目前輪播：%1$d 秒</string>
 </resources>

@@ -241,6 +241,12 @@ class KomicaRepository private constructor(context: Context) {
         return cookieStr?.contains("cf_clearance") == true
     }
 
+    fun clearMemoryCache() {
+        // 繁體中文註解：清除記憶體快取，避免保留過期資料
+        threadDetailCache.evictAll()
+        boardCategoryCache = null
+    }
+
     companion object {
         @Volatile
         private var instance: KomicaRepository? = null

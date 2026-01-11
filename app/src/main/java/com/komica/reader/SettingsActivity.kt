@@ -1,11 +1,19 @@
-package com.komica.reader
+﻿package com.komica.reader
 
 import android.app.AlertDialog
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.MenuItem
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import com.bumptech.glide.Glide
 import com.komica.reader.databinding.ActivitySettingsBinding
+import com.komica.reader.repository.KomicaRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -30,12 +38,30 @@ class SettingsActivity : AppCompatActivity() {
         binding.btnFontSizeList.setOnClickListener { showSizeDialog("theme_font_size") }
         binding.btnFontSizePost.setOnClickListener { showSizeDialog("post_font_size") }
         binding.itemReplyWebviewSlim.setOnClickListener { binding.switchReplyWebviewSlim.toggle() }
+        binding.btnClearCache.setOnClickListener { showClearCacheDialog() }
+        binding.btnSlideshowInterval.setOnClickListener { showSlideshowIntervalDialog() }
+        binding.itemKeepScreenOnSlideshow.setOnClickListener { binding.switchKeepScreenOnSlideshow.toggle() }
+        binding.itemKeepScreenOnPreview.setOnClickListener { binding.switchKeepScreenOnPreview.toggle() }
 
         val isSlimEnabled = prefs.getBoolean(KEY_REPLY_WEBVIEW_SLIM, true)
         binding.switchReplyWebviewSlim.isChecked = isSlimEnabled
         binding.switchReplyWebviewSlim.setOnCheckedChangeListener { _, isChecked ->
-            // 繁體中文註解：儲存回覆頁資源精簡開關
+            // 儲存回覆頁資源精簡設定
             prefs.edit().putBoolean(KEY_REPLY_WEBVIEW_SLIM, isChecked).apply()
+        }
+
+        val isKeepScreenOnSlideshowEnabled = prefs.getBoolean(KEY_KEEP_SCREEN_ON_SLIDESHOW, false)
+        binding.switchKeepScreenOnSlideshow.isChecked = isKeepScreenOnSlideshowEnabled
+        binding.switchKeepScreenOnSlideshow.setOnCheckedChangeListener { _, isChecked ->
+            // 繁體中文註解：儲存輪播時保持螢幕常亮設定
+            prefs.edit().putBoolean(KEY_KEEP_SCREEN_ON_SLIDESHOW, isChecked).apply()
+        }
+
+        val isKeepScreenOnPreviewEnabled = prefs.getBoolean(KEY_KEEP_SCREEN_ON_PREVIEW, false)
+        binding.switchKeepScreenOnPreview.isChecked = isKeepScreenOnPreviewEnabled
+        binding.switchKeepScreenOnPreview.setOnCheckedChangeListener { _, isChecked ->
+            // 繁體中文註解：儲存預覽時保持螢幕常亮設定
+            prefs.edit().putBoolean(KEY_KEEP_SCREEN_ON_PREVIEW, isChecked).apply()
         }
 
         binding.btnAbout.setOnClickListener { showAboutDialog() }
@@ -44,9 +70,11 @@ class SettingsActivity : AppCompatActivity() {
     private fun updateLabels() {
         val listSize = prefs.getFloat("theme_font_size", 16f)
         val postSize = prefs.getFloat("post_font_size", 16f)
+        val slideshowInterval = prefs.getInt(KEY_SLIDESHOW_INTERVAL_SECONDS, DEFAULT_SLIDESHOW_INTERVAL_SECONDS)
 
         binding.tvFontSizeListValue.text = getLabelForSize(listSize)
         binding.tvFontSizePostValue.text = getLabelForSize(postSize)
+        binding.tvSlideshowIntervalValue.text = getSlideshowIntervalLabel(slideshowInterval)
     }
 
     private fun getLabelForSize(size: Float): String {
@@ -55,12 +83,12 @@ class SettingsActivity : AppCompatActivity() {
                 return SIZE_LABELS[i] + " (" + size.toInt() + "sp)"
             }
         }
-        return "?ªè? (" + size + "sp)"
+        return "自訂 (" + size + "sp)"
     }
 
     private fun showSizeDialog(key: String) {
         AlertDialog.Builder(this)
-            .setTitle("?¸æ?å­—é?å¤§å?")
+            .setTitle("選擇字體大小")
             .setItems(SIZE_LABELS) { _, which ->
                 val size = SIZE_VALUES[which]
                 prefs.edit().putFloat(key, size).apply()
@@ -69,20 +97,82 @@ class SettingsActivity : AppCompatActivity() {
             .show()
     }
 
+    private fun showSlideshowIntervalDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.dialog_slideshow_interval_title))
+            .setItems(SLIDESHOW_INTERVAL_LABELS) { _, which ->
+                val seconds = SLIDESHOW_INTERVAL_VALUES[which]
+                // 繁體中文註解：儲存輪播秒數設定
+                prefs.edit().putInt(KEY_SLIDESHOW_INTERVAL_SECONDS, seconds).apply()
+                updateLabels()
+            }
+            .show()
+    }
+
+    private fun getSlideshowIntervalLabel(seconds: Int): String {
+        for (i in SLIDESHOW_INTERVAL_VALUES.indices) {
+            if (seconds == SLIDESHOW_INTERVAL_VALUES[i]) {
+                return SLIDESHOW_INTERVAL_LABELS[i]
+            }
+        }
+        return seconds.toString() + " 秒"
+    }
+
+    private fun showClearCacheDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.dialog_clear_cache_title))
+            .setMessage(getString(R.string.dialog_clear_cache_message))
+            .setPositiveButton(getString(R.string.action_confirm)) { _, _ ->
+                clearCache()
+            }
+            .setNegativeButton(getString(R.string.action_cancel), null)
+            .show()
+    }
+
+    private fun clearCache() {
+        lifecycleScope.launch {
+            val clearSuccess = withContext(Dispatchers.IO) {
+                // 繁體中文註解：清除磁碟快取與 HTTP 快取，避免阻塞主執行緒
+                val httpCacheCleared = deleteDirIfExists(File(cacheDir, "http_cache"))
+                val externalCacheCleared = deleteDirIfExists(externalCacheDir)
+                Glide.get(this@SettingsActivity).clearDiskCache()
+                KomicaRepository.getInstance(applicationContext).clearMemoryCache()
+                httpCacheCleared && externalCacheCleared
+            }
+
+            // 繁體中文註解：記憶體快取需在主執行緒清除
+            Glide.get(this@SettingsActivity).clearMemory()
+            val messageRes = if (clearSuccess) {
+                R.string.msg_clear_cache_success
+            } else {
+                R.string.msg_clear_cache_failed
+            }
+            Toast.makeText(this@SettingsActivity, messageRes, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun deleteDirIfExists(dir: File?): Boolean {
+        if (dir == null || !dir.exists()) {
+            return true
+        }
+        return dir.deleteRecursively()
+    }
+
     private fun showAboutDialog() {
         val versionName = BuildConfig.VERSION_NAME
 
         val message = "Komica Reader\n\n" +
-            "å°ˆç‚º?è¦½ Komica ?¿å?è¨Žè??¿è¨­è¨ˆç??±è??¨ã€‚\n" +
-            "?ä?æµæš¢?„é–±è®€é«”é??å??‡é?è¦½è?å¼•æ?è¿½è¹¤?Ÿèƒ½?‚\n\n" +
-            "?ˆæœ¬: " + versionName + "\n" +
-            "?‹ç™¼?? echoli08\n\n" +
-            "?¬è?é«”å?ä¾›å­¸è¡“ç?ç©¶è?äº¤æ?ä½¿ç”¨??"
+            "本程式為 Komica 匿名板閱讀器。\n" +
+            "由 echoli08 以研究興趣製作，" +
+            "如有問題或建議歡迎回報。\n\n" +
+            "版本： " + versionName + "\n" +
+            "作者： echoli08\n\n" +
+            "本程式僅供學術研究與個人使用。"
 
         AlertDialog.Builder(this)
-            .setTitle("?œæ–¼è»Ÿé?")
+            .setTitle("關於本程式")
             .setMessage(message)
-            .setPositiveButton("?œé?") { dialog, _ -> dialog.dismiss() }
+            .setPositiveButton("確定") { dialog, _ -> dialog.dismiss() }
             .show()
     }
 
@@ -97,7 +187,13 @@ class SettingsActivity : AppCompatActivity() {
     companion object {
         private const val PREFS_NAME = "KomicaReader"
         private const val KEY_REPLY_WEBVIEW_SLIM = "reply_webview_slim"
-        private val SIZE_LABELS = arrayOf("?", "??", "?", "??", "??")
+        private const val KEY_SLIDESHOW_INTERVAL_SECONDS = "slideshow_interval_seconds"
+        private const val KEY_KEEP_SCREEN_ON_SLIDESHOW = "keep_screen_on_slideshow"
+        private const val KEY_KEEP_SCREEN_ON_PREVIEW = "keep_screen_on_preview"
+        private val SIZE_LABELS = arrayOf("小", "中", "大", "特大", "超大")
         private val SIZE_VALUES = floatArrayOf(14f, 16f, 18f, 20f, 24f)
+        private val SLIDESHOW_INTERVAL_LABELS = arrayOf("關閉", "2 秒", "3 秒", "5 秒", "8 秒", "10 秒")
+        private val SLIDESHOW_INTERVAL_VALUES = intArrayOf(0, 2, 3, 5, 8, 10)
+        private const val DEFAULT_SLIDESHOW_INTERVAL_SECONDS = 3
     }
 }

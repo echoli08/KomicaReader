@@ -1,9 +1,15 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/action_gallery"
         android:icon="@android:drawable/ic_menu_gallery"
-        android:title="圖片牆"
+        android:title="@string/action_gallery"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_download_images"
+        android:icon="@android:drawable/ic_menu_save"
+        android:title="@string/action_download_images"
         app:showAsAction="ifRoom" />
 </menu>

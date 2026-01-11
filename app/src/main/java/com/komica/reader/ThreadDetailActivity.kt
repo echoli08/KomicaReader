@@ -1,8 +1,10 @@
 package com.komica.reader
 
+import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -27,6 +29,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.Locale
 import java.util.regex.Pattern
 
 @AndroidEntryPoint
@@ -236,6 +239,101 @@ class ThreadDetailActivity : AppCompatActivity() {
         }
     }
 
+    private fun startBatchDownload() {
+        val thread = currentThread ?: return
+        val imageUrls = thread.posts.mapNotNull { post ->
+            post.imageUrl.takeIf { it.isNotBlank() }
+        }
+
+        if (imageUrls.isEmpty()) {
+            Toast.makeText(this, R.string.msg_download_images_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.dialog_download_images_title))
+            .setMessage(getString(R.string.dialog_download_images_message, imageUrls.size))
+            .setPositiveButton(getString(R.string.action_confirm)) { _, _ ->
+                lifecycleScope.launch {
+                    Toast.makeText(
+                        this@ThreadDetailActivity,
+                        getString(R.string.msg_download_images_start, imageUrls.size),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    val result = downloadImages(imageUrls, thread)
+                    val message = getString(
+                        R.string.msg_download_images_done,
+                        result.downloaded,
+                        result.skipped,
+                        result.targetDir.absolutePath
+                    )
+                    Toast.makeText(this@ThreadDetailActivity, message, Toast.LENGTH_LONG).show()
+                }
+            }
+            .setNegativeButton(getString(R.string.action_cancel), null)
+            .show()
+    }
+
+    private suspend fun downloadImages(imageUrls: List<String>, thread: Thread): DownloadResult {
+        return withContext(Dispatchers.IO) {
+            // 繁體中文註解：下載圖片並保存到 App 專用圖片資料夾
+            val targetDir = getBatchDownloadDir(thread)
+            var downloaded = 0
+            var skipped = 0
+
+            imageUrls.forEachIndexed { index, imageUrl ->
+                val extension = extractImageExtension(imageUrl)
+                val fileName = String.format(Locale.US, "image_%03d.%s", index + 1, extension)
+                val destFile = File(targetDir, fileName)
+                if (destFile.exists()) {
+                    skipped++
+                    return@forEachIndexed
+                }
+
+                try {
+                    val tempFile = Glide.with(this@ThreadDetailActivity)
+                        .asFile()
+                        .load(imageUrl)
+                        .submit()
+                        .get()
+                    tempFile.copyTo(destFile, overwrite = false)
+                    downloaded++
+                } catch (e: Exception) {
+                    KLog.e("Download image failed: ${e.message}")
+                    skipped++
+                }
+            }
+
+            DownloadResult(downloaded, skipped, targetDir)
+        }
+    }
+
+    private fun getBatchDownloadDir(thread: Thread): File {
+        // 繁體中文註解：外部儲存空間不可用時改用內部資料夾
+        val baseDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES) ?: filesDir
+        val folderName = "thread_" + getThreadFolderId(thread)
+        val targetDir = File(baseDir, "KomicaReader/$folderName")
+        if (!targetDir.exists()) {
+            targetDir.mkdirs()
+        }
+        return targetDir
+    }
+
+    private fun getThreadFolderId(thread: Thread): String {
+        val fallbackId = if (thread.postNumber > 0) {
+            thread.postNumber.toString()
+        } else {
+            thread.id
+        }
+        return fallbackId.ifBlank { System.currentTimeMillis().toString() }
+    }
+
+    private fun extractImageExtension(imageUrl: String): String {
+        val lastSegment = Uri.parse(imageUrl).lastPathSegment ?: ""
+        val extension = lastSegment.substringAfterLast('.', "")
+        return if (extension.isBlank()) "jpg" else extension
+    }
+
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.thread_detail_menu, menu)
         return true
@@ -256,7 +354,17 @@ class ThreadDetailActivity : AppCompatActivity() {
                 }
                 true
             }
+            R.id.action_download_images -> {
+                startBatchDownload()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }
+
+    private data class DownloadResult(
+        val downloaded: Int,
+        val skipped: Int,
+        val targetDir: File
+    )
 }
