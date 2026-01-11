@@ -12,8 +12,10 @@ import com.bumptech.glide.Glide
 import com.komica.reader.R
 import com.komica.reader.model.Post
 
-class GalleryAdapter(private val onImageClick: (Int) -> Unit) : 
-    ListAdapter<Post, GalleryAdapter.ViewHolder>(PostDiffCallback()) {
+class GalleryAdapter(
+    private val onImageClick: (Int) -> Unit,
+    private val onImageLongClick: (String) -> Unit
+) : ListAdapter<Post, GalleryAdapter.ViewHolder>(PostDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -22,19 +24,24 @@ class GalleryAdapter(private val onImageClick: (Int) -> Unit) :
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(getItem(position), position, onImageClick)
+        holder.bind(getItem(position), position, onImageClick, onImageLongClick)
     }
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val image: ImageView = itemView.findViewById(R.id.galleryImage)
         private val postNumber: TextView = itemView.findViewById(R.id.postNumber)
 
-        fun bind(post: Post, position: Int, onImageClick: (Int) -> Unit) {
+        fun bind(
+            post: Post,
+            position: Int,
+            onImageClick: (Int) -> Unit,
+            onImageLongClick: (String) -> Unit
+        ) {
             postNumber.text = post.number.toString()
-            
-            // 繁體中文註解：thumbnailUrl 已為非空字串，直接使用
+
+            // ???????thumbnailUrl ???????????
             val thumbUrl = post.thumbnailUrl
-            
+
             if (thumbUrl.isNotEmpty()) {
                 Glide.with(itemView.context)
                     .load(thumbUrl)
@@ -45,6 +52,14 @@ class GalleryAdapter(private val onImageClick: (Int) -> Unit) :
             }
 
             itemView.setOnClickListener { onImageClick(position) }
+            itemView.setOnLongClickListener {
+                if (post.imageUrl.isNotBlank()) {
+                    onImageLongClick(post.imageUrl)
+                    true
+                } else {
+                    false
+                }
+            }
         }
     }
 

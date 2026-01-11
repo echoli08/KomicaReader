@@ -276,7 +276,7 @@ class ThreadDetailActivity : AppCompatActivity() {
 
     private suspend fun downloadImages(imageUrls: List<String>, thread: Thread): DownloadResult {
         return withContext(Dispatchers.IO) {
-            // 繁體中文註解：下載圖片並保存到 App 專用圖片資料夾
+            // 繁體中文註解：下載圖片並保存到指定路徑
             val targetDir = getBatchDownloadDir(thread)
             var downloaded = 0
             var skipped = 0
@@ -309,14 +309,26 @@ class ThreadDetailActivity : AppCompatActivity() {
     }
 
     private fun getBatchDownloadDir(thread: Thread): File {
-        // 繁體中文註解：外部儲存空間不可用時改用內部資料夾
-        val baseDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES) ?: filesDir
+        // 繁體中文註解：依設定選擇下載路徑，外部儲存空間不可用時改用內部資料夾
+        val baseDir = getDownloadBaseDir() ?: filesDir
         val folderName = "thread_" + getThreadFolderId(thread)
         val targetDir = File(baseDir, "KomicaReader/$folderName")
         if (!targetDir.exists()) {
             targetDir.mkdirs()
         }
         return targetDir
+    }
+
+    private fun getDownloadBaseDir(): File? {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val pathType = prefs.getString(KEY_IMAGE_DOWNLOAD_PATH, DOWNLOAD_PATH_PICTURES)
+            ?: DOWNLOAD_PATH_PICTURES
+        val directory = if (pathType == DOWNLOAD_PATH_DOWNLOADS) {
+            Environment.DIRECTORY_DOWNLOADS
+        } else {
+            Environment.DIRECTORY_PICTURES
+        }
+        return getExternalFilesDir(directory)
     }
 
     private fun getThreadFolderId(thread: Thread): String {
@@ -360,6 +372,13 @@ class ThreadDetailActivity : AppCompatActivity() {
             }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    companion object {
+        private const val PREFS_NAME = "KomicaReader"
+        private const val KEY_IMAGE_DOWNLOAD_PATH = "image_download_path"
+        private const val DOWNLOAD_PATH_PICTURES = "pictures"
+        private const val DOWNLOAD_PATH_DOWNLOADS = "downloads"
     }
 
     private data class DownloadResult(

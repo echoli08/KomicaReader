@@ -1,5 +1,6 @@
 ﻿package com.komica.reader
 
+import android.app.AlertDialog
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.View
@@ -33,7 +34,8 @@ class ImagePreviewActivity : AppCompatActivity() {
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         imageUrls = intent.getStringArrayListExtra("imageUrls") ?: emptyList()
         currentPosition = intent.getIntExtra("position", 0)
-        isSlideshowEnabled = getSlideshowIntervalSeconds() > 0
+        // 繁體中文註解：預設不自動啟動輪播，需由使用者手動開始
+        isSlideshowEnabled = false
 
         if (imageUrls.isNotEmpty()) {
             binding.viewPager.adapter = ImagePagerAdapter(imageUrls)
@@ -41,11 +43,13 @@ class ImagePreviewActivity : AppCompatActivity() {
             updateCounter()
             updateSlideshowToggle()
             binding.btnSlideshowToggle.visibility = if (imageUrls.size > 1) View.VISIBLE else View.GONE
+            binding.btnSlideshowSpeed.visibility = if (imageUrls.size > 1) View.VISIBLE else View.GONE
             binding.btnSlideshowToggle.setOnClickListener { toggleSlideshow() }
             binding.btnSlideshowToggle.setOnLongClickListener {
                 showSlideshowIntervalHint()
                 true
             }
+            binding.btnSlideshowSpeed.setOnClickListener { showSlideshowSpeedDialog() }
 
             pageChangeCallback = object : ViewPager2.OnPageChangeCallback() {
                 override fun onPageSelected(position: Int) {
@@ -156,6 +160,26 @@ class ImagePreviewActivity : AppCompatActivity() {
         binding.btnSlideshowToggle.contentDescription = getString(descRes)
     }
 
+    private fun showSlideshowSpeedDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.dialog_slideshow_interval_title))
+            .setItems(SLIDESHOW_INTERVAL_LABELS) { _, which ->
+                val seconds = SLIDESHOW_INTERVAL_VALUES[which]
+                // 繁體中文註解：儲存輪播秒數並依狀態更新輪播
+                prefs.edit().putInt(KEY_SLIDESHOW_INTERVAL_SECONDS, seconds).apply()
+                if (seconds <= 0) {
+                    isSlideshowEnabled = false
+                    stopSlideshow()
+                } else if (isSlideshowEnabled) {
+                    restartSlideshow()
+                }
+                updateSlideshowToggle()
+                updateKeepScreenOnState()
+                showSlideshowIntervalHint()
+            }
+            .show()
+    }
+
     private fun getSlideshowIntervalSeconds(): Int {
         return prefs.getInt(KEY_SLIDESHOW_INTERVAL_SECONDS, DEFAULT_SLIDESHOW_INTERVAL_SECONDS)
     }
@@ -189,5 +213,7 @@ class ImagePreviewActivity : AppCompatActivity() {
         private const val KEY_KEEP_SCREEN_ON_SLIDESHOW = "keep_screen_on_slideshow"
         private const val KEY_KEEP_SCREEN_ON_PREVIEW = "keep_screen_on_preview"
         private const val DEFAULT_SLIDESHOW_INTERVAL_SECONDS = 3
+        private val SLIDESHOW_INTERVAL_LABELS = arrayOf("關閉", "2 秒", "3 秒", "5 秒", "8 秒", "10 秒")
+        private val SLIDESHOW_INTERVAL_VALUES = intArrayOf(0, 2, 3, 5, 8, 10)
     }
 }

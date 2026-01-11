@@ -46,6 +46,7 @@
     <string name="setting_post_font_size">討論串內容字體大小</string>
     <string name="setting_font_size_normal">正常</string>
     <string name="setting_about">關於本程式</string>
+    <string name="setting_about_desc">版本與作者資訊</string>
     <string name="setting_reply_section">回覆設定</string>
     <string name="setting_reply_webview_slim">回覆頁資源精簡</string>
     <string name="setting_reply_webview_slim_desc">阻擋圖片與影音，縮短載入時間（驗證仍會載入）</string>
@@ -59,6 +60,11 @@
     <string name="setting_keep_screen_on_slideshow_desc">播放輪播時避免螢幕休眠</string>
     <string name="setting_keep_screen_on_preview">預覽時保持螢幕常亮</string>
     <string name="setting_keep_screen_on_preview_desc">一般預覽也保持螢幕不進入休眠</string>
+    <string name="setting_download_path">圖片下載路徑</string>
+    <string name="setting_download_path_desc">選擇批次下載圖片的儲存位置</string>
+    <string name="setting_download_path_value_pictures">App 圖片資料夾</string>
+    <string name="setting_download_path_value_downloads">App 下載資料夾</string>
+    <string name="dialog_download_path_title">選擇下載路徑</string>
 
     <string name="setting_cache_section">快取設定</string>
     <string name="setting_clear_cache">清除快取</string>
@@ -70,16 +76,21 @@
 
     <string name="action_gallery">圖片牆</string>
     <string name="action_download_images">批次下載</string>
+    <string name="action_download_image">下載圖片</string>
     <string name="dialog_download_images_title">批次下載圖片</string>
-    <string name="dialog_download_images_message">共 %1$d 張圖片，將下載到 App 圖片資料夾，是否繼續？</string>
+    <string name="dialog_download_images_message">共 %1$d 張圖片，將下載到 App 儲存資料夾，是否繼續？</string>
+    <string name="dialog_image_action_title">選擇操作</string>
     <string name="msg_download_images_start">開始下載 %1$d 張圖片</string>
     <string name="msg_download_images_empty">此討論串沒有圖片</string>
     <string name="msg_download_images_done">已下載 %1$d 張，略過 %2$d 張\n位置：%3$s</string>
+    <string name="msg_download_image_success">已下載圖片：%1$s</string>
+    <string name="msg_download_image_failed">下載圖片失敗</string>
     <string name="action_confirm">確定</string>
 
     <!-- Image Preview -->
     <string name="content_desc_slideshow_play">開始輪播</string>
     <string name="content_desc_slideshow_pause">暫停輪播</string>
+    <string name="content_desc_slideshow_speed">調整輪播速度</string>
     <string name="msg_slideshow_disabled">輪播已關閉，請至設定調整</string>
     <string name="msg_slideshow_interval_current">目前輪播：%1$d 秒</string>
 </resources>
