@@ -61,9 +61,9 @@
     <string name="setting_keep_screen_on_preview">預覽時保持螢幕常亮</string>
     <string name="setting_keep_screen_on_preview_desc">一般預覽也保持螢幕不進入休眠</string>
     <string name="setting_download_path">圖片下載路徑</string>
-    <string name="setting_download_path_desc">選擇批次下載圖片的儲存位置</string>
-    <string name="setting_download_path_value_pictures">App 圖片資料夾</string>
-    <string name="setting_download_path_value_downloads">App 下載資料夾</string>
+    <string name="setting_download_path_desc">選擇公開相簿的儲存位置</string>
+    <string name="setting_download_path_value_pictures">公開圖片資料夾</string>
+    <string name="setting_download_path_value_downloads">公開下載資料夾</string>
     <string name="dialog_download_path_title">選擇下載路徑</string>
 
     <string name="setting_cache_section">快取設定</string>
@@ -78,7 +78,7 @@
     <string name="action_download_images">批次下載</string>
     <string name="action_download_image">下載圖片</string>
     <string name="dialog_download_images_title">批次下載圖片</string>
-    <string name="dialog_download_images_message">共 %1$d 張圖片，將下載到 App 儲存資料夾，是否繼續？</string>
+    <string name="dialog_download_images_message">共 %1$d 張圖片，將下載到公開儲存資料夾，是否繼續？</string>
     <string name="dialog_image_action_title">選擇操作</string>
     <string name="msg_download_images_start">開始下載 %1$d 張圖片</string>
     <string name="msg_download_images_empty">此討論串沒有圖片</string>

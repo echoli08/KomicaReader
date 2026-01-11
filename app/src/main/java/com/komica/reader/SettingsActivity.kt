@@ -10,6 +10,7 @@ import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.komica.reader.databinding.ActivitySettingsBinding
 import com.komica.reader.repository.KomicaRepository
+import com.komica.reader.util.ImageDownloadUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -72,12 +73,12 @@ class SettingsActivity : AppCompatActivity() {
         val listSize = prefs.getFloat("theme_font_size", 16f)
         val postSize = prefs.getFloat("post_font_size", 16f)
         val slideshowInterval = prefs.getInt(KEY_SLIDESHOW_INTERVAL_SECONDS, DEFAULT_SLIDESHOW_INTERVAL_SECONDS)
-        val downloadPath = prefs.getString(KEY_IMAGE_DOWNLOAD_PATH, DEFAULT_DOWNLOAD_PATH) ?: DEFAULT_DOWNLOAD_PATH
+        val downloadPath = ImageDownloadUtils.getDownloadPathType(this)
 
         binding.tvFontSizeListValue.text = getLabelForSize(listSize)
         binding.tvFontSizePostValue.text = getLabelForSize(postSize)
         binding.tvSlideshowIntervalValue.text = getSlideshowIntervalLabel(slideshowInterval)
-        binding.tvDownloadPathValue.text = getDownloadPathLabel(downloadPath)
+        binding.tvDownloadPathValue.text = ImageDownloadUtils.getDownloadPathLabel(this, downloadPath)
     }
 
     private fun getLabelForSize(size: Float): String {
@@ -126,22 +127,18 @@ class SettingsActivity : AppCompatActivity() {
             getString(R.string.setting_download_path_value_pictures),
             getString(R.string.setting_download_path_value_downloads)
         )
-        val values = arrayOf(DOWNLOAD_PATH_PICTURES, DOWNLOAD_PATH_DOWNLOADS)
+        val values = arrayOf(
+            ImageDownloadUtils.DOWNLOAD_PATH_PICTURES,
+            ImageDownloadUtils.DOWNLOAD_PATH_DOWNLOADS
+        )
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.dialog_download_path_title))
             .setItems(labels) { _, which ->
                 // 繁體中文註解：儲存圖片下載路徑設定
-                prefs.edit().putString(KEY_IMAGE_DOWNLOAD_PATH, values[which]).apply()
+                prefs.edit().putString(ImageDownloadUtils.KEY_IMAGE_DOWNLOAD_PATH, values[which]).apply()
                 updateLabels()
             }
             .show()
-    }
-
-    private fun getDownloadPathLabel(path: String): String {
-        return when (path) {
-            DOWNLOAD_PATH_DOWNLOADS -> getString(R.string.setting_download_path_value_downloads)
-            else -> getString(R.string.setting_download_path_value_pictures)
-        }
     }
 
     private fun showClearCacheDialog() {
@@ -216,14 +213,10 @@ class SettingsActivity : AppCompatActivity() {
         private const val KEY_SLIDESHOW_INTERVAL_SECONDS = "slideshow_interval_seconds"
         private const val KEY_KEEP_SCREEN_ON_SLIDESHOW = "keep_screen_on_slideshow"
         private const val KEY_KEEP_SCREEN_ON_PREVIEW = "keep_screen_on_preview"
-        private const val KEY_IMAGE_DOWNLOAD_PATH = "image_download_path"
         private val SIZE_LABELS = arrayOf("小", "中", "大", "特大", "超大")
         private val SIZE_VALUES = floatArrayOf(14f, 16f, 18f, 20f, 24f)
         private val SLIDESHOW_INTERVAL_LABELS = arrayOf("關閉", "2 秒", "3 秒", "5 秒", "8 秒", "10 秒")
         private val SLIDESHOW_INTERVAL_VALUES = intArrayOf(0, 2, 3, 5, 8, 10)
         private const val DEFAULT_SLIDESHOW_INTERVAL_SECONDS = 3
-        private const val DOWNLOAD_PATH_PICTURES = "pictures"
-        private const val DOWNLOAD_PATH_DOWNLOADS = "downloads"
-        private const val DEFAULT_DOWNLOAD_PATH = DOWNLOAD_PATH_PICTURES
     }
 }

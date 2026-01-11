@@ -4,7 +4,6 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
 import android.view.MenuItem
 import android.view.View
 import android.widget.ProgressBar
@@ -19,6 +18,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.komica.reader.adapter.GalleryAdapter
+import com.komica.reader.util.ImageDownloadUtils
 import com.komica.reader.viewmodel.GalleryViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
@@ -141,17 +141,28 @@ class GalleryActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val resultPath = withContext(Dispatchers.IO) {
                 try {
-                    val targetDir = getDownloadDir()
+                    val folderName = getThreadFolderId(threadUrl) ?: "gallery"
+                    val relativePath = ImageDownloadUtils.getDownloadRelativePath(
+                        this@GalleryActivity,
+                        folderName
+                    )
                     val extension = extractImageExtension(imageUrl)
                     val fileName = "image_" + System.currentTimeMillis() + "." + extension
-                    val destFile = File(targetDir, fileName)
+                    val mimeType = ImageDownloadUtils.getMimeTypeFromExtension(extension)
                     val tempFile = Glide.with(this@GalleryActivity)
                         .asFile()
                         .load(imageUrl)
                         .submit()
                         .get()
-                    tempFile.copyTo(destFile, overwrite = false)
-                    destFile.absolutePath
+                    // 繁體中文註解：透過 MediaStore 寫入公開相簿
+                    val uri = ImageDownloadUtils.saveImageToMediaStore(
+                        this@GalleryActivity,
+                        tempFile,
+                        fileName,
+                        relativePath,
+                        mimeType
+                    )
+                    if (uri == null) null else relativePath
                 } catch (e: Exception) {
                     null
                 }
@@ -167,29 +178,6 @@ class GalleryActivity : AppCompatActivity() {
                 ).show()
             }
         }
-    }
-
-    private fun getDownloadDir(): File {
-        // 繁體中文註解：依設定選擇下載路徑，外部儲存空間不可用時改用內部資料夾
-        val baseDir = getDownloadBaseDir() ?: filesDir
-        val folderName = getThreadFolderId(threadUrl) ?: "gallery"
-        val targetDir = File(baseDir, "KomicaReader/$folderName")
-        if (!targetDir.exists()) {
-            targetDir.mkdirs()
-        }
-        return targetDir
-    }
-
-    private fun getDownloadBaseDir(): File? {
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        val pathType = prefs.getString(KEY_IMAGE_DOWNLOAD_PATH, DOWNLOAD_PATH_PICTURES)
-            ?: DOWNLOAD_PATH_PICTURES
-        val directory = if (pathType == DOWNLOAD_PATH_DOWNLOADS) {
-            Environment.DIRECTORY_DOWNLOADS
-        } else {
-            Environment.DIRECTORY_PICTURES
-        }
-        return getExternalFilesDir(directory)
     }
 
     private fun getThreadFolderId(url: String?): String? {
@@ -212,10 +200,4 @@ class GalleryActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    companion object {
-        private const val PREFS_NAME = "KomicaReader"
-        private const val KEY_IMAGE_DOWNLOAD_PATH = "image_download_path"
-        private const val DOWNLOAD_PATH_PICTURES = "pictures"
-        private const val DOWNLOAD_PATH_DOWNLOADS = "downloads"
-    }
 }

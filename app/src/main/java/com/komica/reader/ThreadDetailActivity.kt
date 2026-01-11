@@ -4,7 +4,6 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -21,6 +20,7 @@ import com.komica.reader.databinding.ActivityThreadDetailBinding
 import com.komica.reader.model.Post
 import com.komica.reader.model.Thread
 import com.komica.reader.service.KomicaService
+import com.komica.reader.util.ImageDownloadUtils
 import com.komica.reader.util.getSerializableCompat
 import com.komica.reader.util.KLog
 import com.komica.reader.viewmodel.ThreadDetailViewModel
@@ -265,7 +265,7 @@ class ThreadDetailActivity : AppCompatActivity() {
                         R.string.msg_download_images_done,
                         result.downloaded,
                         result.skipped,
-                        result.targetDir.absolutePath
+                        result.relativePath
                     )
                     Toast.makeText(this@ThreadDetailActivity, message, Toast.LENGTH_LONG).show()
                 }
@@ -277,18 +277,17 @@ class ThreadDetailActivity : AppCompatActivity() {
     private suspend fun downloadImages(imageUrls: List<String>, thread: Thread): DownloadResult {
         return withContext(Dispatchers.IO) {
             // 繁體中文註解：下載圖片並保存到指定路徑
-            val targetDir = getBatchDownloadDir(thread)
+            val relativePath = ImageDownloadUtils.getDownloadRelativePath(
+                this@ThreadDetailActivity,
+                "thread_" + getThreadFolderId(thread)
+            )
             var downloaded = 0
             var skipped = 0
 
             imageUrls.forEachIndexed { index, imageUrl ->
                 val extension = extractImageExtension(imageUrl)
                 val fileName = String.format(Locale.US, "image_%03d.%s", index + 1, extension)
-                val destFile = File(targetDir, fileName)
-                if (destFile.exists()) {
-                    skipped++
-                    return@forEachIndexed
-                }
+                val mimeType = ImageDownloadUtils.getMimeTypeFromExtension(extension)
 
                 try {
                     val tempFile = Glide.with(this@ThreadDetailActivity)
@@ -296,39 +295,27 @@ class ThreadDetailActivity : AppCompatActivity() {
                         .load(imageUrl)
                         .submit()
                         .get()
-                    tempFile.copyTo(destFile, overwrite = false)
-                    downloaded++
+                    // 繁體中文註解：透過 MediaStore 寫入公開相簿
+                    val uri = ImageDownloadUtils.saveImageToMediaStore(
+                        this@ThreadDetailActivity,
+                        tempFile,
+                        fileName,
+                        relativePath,
+                        mimeType
+                    )
+                    if (uri != null) {
+                        downloaded++
+                    } else {
+                        skipped++
+                    }
                 } catch (e: Exception) {
                     KLog.e("Download image failed: ${e.message}")
                     skipped++
                 }
             }
 
-            DownloadResult(downloaded, skipped, targetDir)
+            DownloadResult(downloaded, skipped, relativePath)
         }
-    }
-
-    private fun getBatchDownloadDir(thread: Thread): File {
-        // 繁體中文註解：依設定選擇下載路徑，外部儲存空間不可用時改用內部資料夾
-        val baseDir = getDownloadBaseDir() ?: filesDir
-        val folderName = "thread_" + getThreadFolderId(thread)
-        val targetDir = File(baseDir, "KomicaReader/$folderName")
-        if (!targetDir.exists()) {
-            targetDir.mkdirs()
-        }
-        return targetDir
-    }
-
-    private fun getDownloadBaseDir(): File? {
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        val pathType = prefs.getString(KEY_IMAGE_DOWNLOAD_PATH, DOWNLOAD_PATH_PICTURES)
-            ?: DOWNLOAD_PATH_PICTURES
-        val directory = if (pathType == DOWNLOAD_PATH_DOWNLOADS) {
-            Environment.DIRECTORY_DOWNLOADS
-        } else {
-            Environment.DIRECTORY_PICTURES
-        }
-        return getExternalFilesDir(directory)
     }
 
     private fun getThreadFolderId(thread: Thread): String {
@@ -374,16 +361,9 @@ class ThreadDetailActivity : AppCompatActivity() {
         }
     }
 
-    companion object {
-        private const val PREFS_NAME = "KomicaReader"
-        private const val KEY_IMAGE_DOWNLOAD_PATH = "image_download_path"
-        private const val DOWNLOAD_PATH_PICTURES = "pictures"
-        private const val DOWNLOAD_PATH_DOWNLOADS = "downloads"
-    }
-
     private data class DownloadResult(
         val downloaded: Int,
         val skipped: Int,
-        val targetDir: File
+        val relativePath: String
     )
 }
