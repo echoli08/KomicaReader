@@ -60,6 +60,7 @@ class SettingsActivity : AppCompatActivity() {
         binding.btnSlideshowInterval.setOnClickListener { showSlideshowIntervalDialog() }
         binding.itemKeepScreenOnSlideshow.setOnClickListener { binding.switchKeepScreenOnSlideshow.toggle() }
         binding.itemKeepScreenOnPreview.setOnClickListener { binding.switchKeepScreenOnPreview.toggle() }
+        binding.btnImageMaxZoom.setOnClickListener { showImageMaxZoomDialog() }
         binding.btnDownloadPath.setOnClickListener { showDownloadPathDialog() }
         binding.btnExportFavorites.setOnClickListener { exportFavorites() }
         binding.btnImportFavorites.setOnClickListener { importFavorites() }
@@ -92,11 +93,13 @@ class SettingsActivity : AppCompatActivity() {
         val listSize = prefs.getFloat("theme_font_size", 16f)
         val postSize = prefs.getFloat("post_font_size", 16f)
         val slideshowInterval = prefs.getInt(KEY_SLIDESHOW_INTERVAL_SECONDS, DEFAULT_SLIDESHOW_INTERVAL_SECONDS)
+        val imageMaxZoom = prefs.getFloat(KEY_IMAGE_MAX_ZOOM, DEFAULT_IMAGE_MAX_ZOOM)
         val downloadPath = ImageDownloadUtils.getDownloadPathType(this)
 
         binding.tvFontSizeListValue.text = getLabelForSize(listSize)
         binding.tvFontSizePostValue.text = getLabelForSize(postSize)
         binding.tvSlideshowIntervalValue.text = getSlideshowIntervalLabel(slideshowInterval)
+        binding.tvImageMaxZoomValue.text = getImageMaxZoomLabel(imageMaxZoom)
         binding.tvDownloadPathValue.text = ImageDownloadUtils.getDownloadPathLabel(this, downloadPath)
     }
 
@@ -139,6 +142,27 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
         return seconds.toString() + " 秒"
+    }
+
+    private fun showImageMaxZoomDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.setting_image_max_zoom))
+            .setItems(IMAGE_MAX_ZOOM_LABELS) { _, which ->
+                val zoomScale = IMAGE_MAX_ZOOM_VALUES[which]
+                // 繁體中文註解：儲存預覽最大縮放倍率設定
+                prefs.edit().putFloat(KEY_IMAGE_MAX_ZOOM, zoomScale).apply()
+                updateLabels()
+            }
+            .show()
+    }
+
+    private fun getImageMaxZoomLabel(scale: Float): String {
+        for (i in IMAGE_MAX_ZOOM_VALUES.indices) {
+            if (kotlin.math.abs(scale - IMAGE_MAX_ZOOM_VALUES[i]) < 0.01f) {
+                return IMAGE_MAX_ZOOM_LABELS[i]
+            }
+        }
+        return scale.toInt().toString() + " 倍"
     }
 
     private fun showDownloadPathDialog() {
@@ -330,11 +354,15 @@ class SettingsActivity : AppCompatActivity() {
         private const val KEY_SLIDESHOW_INTERVAL_SECONDS = "slideshow_interval_seconds"
         private const val KEY_KEEP_SCREEN_ON_SLIDESHOW = "keep_screen_on_slideshow"
         private const val KEY_KEEP_SCREEN_ON_PREVIEW = "keep_screen_on_preview"
+        private const val KEY_IMAGE_MAX_ZOOM = "image_max_zoom_scale"
         private val SIZE_LABELS = arrayOf("小", "中", "大", "特大", "超大")
         private val SIZE_VALUES = floatArrayOf(14f, 16f, 18f, 20f, 24f)
         private val SLIDESHOW_INTERVAL_LABELS = arrayOf("關閉", "1 秒", "2 秒", "3 秒", "5 秒", "8 秒", "10 秒")
         private val SLIDESHOW_INTERVAL_VALUES = intArrayOf(0, 1, 2, 3, 5, 8, 10)
         private const val DEFAULT_SLIDESHOW_INTERVAL_SECONDS = 3
+        private val IMAGE_MAX_ZOOM_LABELS = arrayOf("2 倍", "3 倍", "4 倍", "5 倍")
+        private val IMAGE_MAX_ZOOM_VALUES = floatArrayOf(2f, 3f, 4f, 5f)
+        private const val DEFAULT_IMAGE_MAX_ZOOM = 4.0f
         private const val DEFAULT_FAVORITES_EXPORT_NAME = "komica_favorites.txt"
     }
 }

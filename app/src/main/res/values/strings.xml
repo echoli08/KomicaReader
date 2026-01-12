@@ -60,6 +60,9 @@
     <string name="setting_keep_screen_on_slideshow_desc">播放輪播時避免螢幕休眠</string>
     <string name="setting_keep_screen_on_preview">預覽時保持螢幕常亮</string>
     <string name="setting_keep_screen_on_preview_desc">一般預覽也保持螢幕不進入休眠</string>
+    <string name="setting_image_max_zoom">預覽放大上限</string>
+    <string name="setting_image_max_zoom_desc">設定預覽圖片最大縮放倍率</string>
+    <string name="setting_image_max_zoom_default">4 倍</string>
     <string name="setting_download_path">圖片下載路徑</string>
     <string name="setting_download_path_desc">選擇公開相簿的儲存位置</string>
     <string name="setting_download_path_value_pictures">公開圖片資料夾</string>

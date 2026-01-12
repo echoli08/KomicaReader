@@ -3,14 +3,16 @@ package com.komica.reader.adapter
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.komica.reader.R
+import com.komica.reader.widget.ZoomableImageView
 
 class ImagePagerAdapter(
     private val imageUrls: List<String>,
-    private val onImageLongClick: (String) -> Unit
+    private val onImageLongClick: (String) -> Unit,
+    private val onScaleChanged: (Int, Boolean) -> Unit,
+    private val maxScale: Float
 ) : RecyclerView.Adapter<ImagePagerAdapter.ImageViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ImageViewHolder {
@@ -21,12 +23,23 @@ class ImagePagerAdapter(
 
     override fun onBindViewHolder(holder: ImageViewHolder, position: Int) {
         val imageUrl = imageUrls[position]
+        holder.imageView.minScale = 1.0f
+        holder.imageView.maxScale = maxScale
+        // 繁體中文註解：重設縮放狀態，避免回收重用影響其他頁面
+        holder.imageView.resetZoom()
+        holder.imageView.onZoomChanged = { isZoomed ->
+            val adapterPosition = holder.bindingAdapterPosition
+            if (adapterPosition != RecyclerView.NO_POSITION) {
+                // 繁體中文註解：同步回報目前頁面的縮放狀態
+                onScaleChanged(adapterPosition, isZoomed)
+            }
+        }
         Glide.with(holder.itemView.context)
             .load(imageUrl)
             .fitCenter()
             .into(holder.imageView)
         holder.imageView.setOnLongClickListener {
-            // 繁體中文註解：長按圖片時提供設成桌布的選項
+            // 繁體中文註解：長按顯示下載、分享、設桌布的選項
             onImageLongClick(imageUrl)
             true
         }
@@ -35,6 +48,6 @@ class ImagePagerAdapter(
     override fun getItemCount(): Int = imageUrls.size
 
     class ImageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val imageView: ImageView = itemView.findViewById(R.id.imagePreview)
+        val imageView: ZoomableImageView = itemView.findViewById(R.id.imagePreview)
     }
 }

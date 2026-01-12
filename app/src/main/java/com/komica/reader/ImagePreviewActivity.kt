@@ -53,6 +53,7 @@ class ImagePreviewActivity : AppCompatActivity() {
     private var isVerticalSwipeHandled = false
     private var gestureDetector: GestureDetector? = null
     private var isTapHandled = false
+    private var isImageZoomed = false
 
     private val requestStoragePermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -82,16 +83,24 @@ class ImagePreviewActivity : AppCompatActivity() {
         // 繁體中文註解：預設不自動啟動輪播，需由使用者手動開始
         isSlideshowEnabled = false
 
-        if (imageUrls.isNotEmpty()) {
-            isLoopEnabled = imageUrls.size > 1
-            displayImageUrls = if (isLoopEnabled) {
-                listOf(imageUrls.last()) + imageUrls + listOf(imageUrls.first())
-            } else {
-                imageUrls
-            }
-            binding.viewPager.adapter = ImagePagerAdapter(displayImageUrls) { imageUrl ->
-                showImageOptionsDialog(imageUrl)
-            }
+            if (imageUrls.isNotEmpty()) {
+                isLoopEnabled = imageUrls.size > 1
+                displayImageUrls = if (isLoopEnabled) {
+                    listOf(imageUrls.last()) + imageUrls + listOf(imageUrls.first())
+                } else {
+                    imageUrls
+                }
+                val imageMaxZoomScale = getImageMaxZoomScale()
+                binding.viewPager.adapter = ImagePagerAdapter(
+                    displayImageUrls,
+                    { imageUrl ->
+                        showImageOptionsDialog(imageUrl)
+                    },
+                    { adapterPosition, isZoomed ->
+                        updateImageZoomState(adapterPosition, isZoomed)
+                    },
+                    imageMaxZoomScale
+                )
             val initialPosition = if (isLoopEnabled) currentPosition + 1 else currentPosition
             binding.viewPager.setCurrentItem(initialPosition, false)
             updateCounter()
@@ -121,6 +130,7 @@ class ImagePreviewActivity : AppCompatActivity() {
                         }
                     }
                     updateCounter()
+                    resetZoomStateForNewPage()
                     if (isSlideshowEnabled) {
                         restartSlideshow()
                     }
@@ -329,8 +339,9 @@ class ImagePreviewActivity : AppCompatActivity() {
             }
         })
         binding.touchOverlay.setOnTouchListener { _, event ->
-            if (imageUrls.size <= 1) {
-                return@setOnTouchListener false
+            if (event.pointerCount > 1 || isImageZoomed || imageUrls.size <= 1) {
+                // 繁體中文註解：縮放或單張圖片時直接交給 ViewPager2 / ZoomableImageView 處理
+                return@setOnTouchListener binding.viewPager.dispatchTouchEvent(event)
             }
             if (event.actionMasked == MotionEvent.ACTION_DOWN) {
                 isVerticalSwipeHandled = false
@@ -343,6 +354,26 @@ class ImagePreviewActivity : AppCompatActivity() {
             val handledByPager = binding.viewPager.dispatchTouchEvent(event)
             handledByDetector || handledByPager
         }
+    }
+
+    private fun updateImageZoomState(adapterPosition: Int, isZoomed: Boolean) {
+        if (adapterPosition != binding.viewPager.currentItem) return
+        if (isImageZoomed == isZoomed) return
+        // 繁體中文註解：縮放中暫停翻頁手勢，避免誤觸切換
+        isImageZoomed = isZoomed
+        binding.viewPager.isUserInputEnabled = !isZoomed
+    }
+
+    private fun resetZoomStateForNewPage() {
+        // 繁體中文註解：切頁時重置縮放狀態，避免殘留影響操作
+        isImageZoomed = false
+        binding.viewPager.isUserInputEnabled = true
+    }
+
+    private fun getImageMaxZoomScale(): Float {
+        val scale = prefs.getFloat(KEY_IMAGE_MAX_ZOOM, DEFAULT_IMAGE_MAX_ZOOM)
+        // 繁體中文註解：避免異常設定值導致縮放失效
+        return scale.coerceAtLeast(1.0f)
     }
 
     private fun showNextImage() {
@@ -530,7 +561,9 @@ class ImagePreviewActivity : AppCompatActivity() {
         private const val KEY_SLIDESHOW_INTERVAL_SECONDS = "slideshow_interval_seconds"
         private const val KEY_KEEP_SCREEN_ON_SLIDESHOW = "keep_screen_on_slideshow"
         private const val KEY_KEEP_SCREEN_ON_PREVIEW = "keep_screen_on_preview"
+        private const val KEY_IMAGE_MAX_ZOOM = "image_max_zoom_scale"
         private const val DEFAULT_SLIDESHOW_INTERVAL_SECONDS = 3
+        private const val DEFAULT_IMAGE_MAX_ZOOM = 4.0f
         private val SLIDESHOW_INTERVAL_LABELS = arrayOf("關閉", "1 秒", "2 秒", "3 秒", "5 秒", "8 秒", "10 秒")
         private val SLIDESHOW_INTERVAL_VALUES = intArrayOf(0, 1, 2, 3, 5, 8, 10)
     }
