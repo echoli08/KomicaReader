@@ -12,8 +12,8 @@ android {
         applicationId = "com.komica.reader"
         minSdk = 24
         targetSdk = 35
-        versionCode = 2000000
-        versionName = "2.0.0-alpha"
+        versionCode = 2260513
+        versionName = "V2.26.0513"
     }
 
     buildFeatures {
