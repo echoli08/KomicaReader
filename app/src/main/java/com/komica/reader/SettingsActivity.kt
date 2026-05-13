@@ -71,7 +71,7 @@ class SettingsActivity : AppCompatActivity() {
                 SettingsAdapter.SettingItem.Row("favorites_backup", "資料備份", "JSON", "備份我的最愛、閱讀設定、圖片設定與介面狀態"),
                 SettingsAdapter.SettingItem.Row("clear_cache", "清除快取", FormatBytes(GetCacheSize()), "清除 App 快取資料夾"),
                 SettingsAdapter.SettingItem.Row("clear_history", "清除瀏覽歷史", "執行", "移除本機歷史紀錄"),
-                SettingsAdapter.SettingItem.Row("about", "關於", "2.0.0-alpha", "KomicaReader V2")
+                SettingsAdapter.SettingItem.Row("about", "關於", AppVersionName(), "KomicaReader V2")
             )
         )
     }
@@ -210,7 +210,7 @@ class SettingsActivity : AppCompatActivity() {
             .setMessage(
                 """
                 KomicaReader V2 重製版
-                版本：2.0.0-alpha
+                版本：${AppVersionName()}
 
                 主要功能：
                 - 讀取 Komica 看板、主題列表與討論串內容
@@ -227,6 +227,12 @@ class SettingsActivity : AppCompatActivity() {
             )
             .setPositiveButton("確定", null)
             .show()
+    }
+
+    private fun AppVersionName(): String {
+        return runCatching {
+            packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
+        }.getOrDefault("未知版本")
     }
 
     private fun DeleteDir(dir: File) {

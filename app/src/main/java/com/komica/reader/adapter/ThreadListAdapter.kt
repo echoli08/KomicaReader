@@ -55,7 +55,7 @@ class ThreadListAdapter(
                 binding.thumbLabel.visibility = View.GONE
                 Glide.with(binding.threadThumbnail)
                     .load(thread.imageUrl)
-                    .centerCrop()
+                    .fitCenter()
                     .into(binding.threadThumbnail)
             }
             binding.root.setOnClickListener { onThreadClick(thread) }

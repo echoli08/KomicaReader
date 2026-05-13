@@ -23,7 +23,7 @@
         android:adjustViewBounds="true"
         android:background="@drawable/bg_thumb"
         android:contentDescription="討論串圖片"
-        android:scaleType="centerCrop"
+        android:scaleType="fitCenter"
         android:visibility="gone" />
 
     <TextView

@@ -80,7 +80,7 @@ class PostAdapter(
                 Glide.with(binding.postImage).clear(binding.postImage)
             } else {
                 binding.postImage.visibility = View.VISIBLE
-                Glide.with(binding.postImage).load(image).centerCrop().into(binding.postImage)
+                Glide.with(binding.postImage).load(image).fitCenter().into(binding.postImage)
                 binding.postImage.setOnClickListener {
                     val imageIndex = postPositionToImageIndex[position] ?: 0
                     onImageClick(imageIndex, imageUrls)

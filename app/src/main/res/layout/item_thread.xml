@@ -17,7 +17,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:contentDescription="主題預覽圖"
-            android:scaleType="centerCrop"
+            android:scaleType="fitCenter"
             android:visibility="gone" />
 
         <TextView
