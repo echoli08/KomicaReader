@@ -1,0 +1,25 @@
+<resources>
+
+    <color name="kr_background">#121614</color>
+
+    <color name="kr_surface">#1C211E</color>
+
+    <color name="kr_surface_alt">#26302B</color>
+
+    <color name="kr_text">#E7ECE8</color>
+
+    <color name="kr_muted">#A5B0AA</color>
+
+    <color name="kr_primary">#FFB74D</color>
+
+    <color name="kr_secondary">#78C4D4</color>
+
+    <color name="kr_warning">#D6AD72</color>
+
+    <color name="kr_fab">#5F6670</color>
+
+    <color name="kr_thread_meta">#8A8A8A</color>
+
+    <color name="kr_post_header">#E0E0E0</color>
+
+</resources>

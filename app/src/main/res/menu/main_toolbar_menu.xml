@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_theme_toggle"
+        android:icon="@drawable/ic_moon_theme"
+        android:title="切換深淺模式"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_history"
+        android:icon="@drawable/ic_calendar_history"
+        android:title="歷史"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_settings"
+        android:icon="@drawable/ic_settings_gear"
+        android:title="@string/action_settings"
+        app:showAsAction="always" />
+</menu>

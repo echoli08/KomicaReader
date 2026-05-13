@@ -1,0 +1,23 @@
+<resources>
+
+    <style name="Theme.KomicaReader" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+
+        <item name="android:fontFamily">sans</item>
+
+        <item name="android:windowLightStatusBar">false</item>
+
+        <item name="android:statusBarColor">@color/kr_background</item>
+
+        <item name="android:navigationBarColor">@color/kr_surface</item>
+
+        <item name="android:colorAccent">@color/kr_primary</item>
+
+        <item name="colorPrimary">@color/kr_primary</item>
+
+        <item name="colorSecondary">@color/kr_secondary</item>
+
+        <item name="android:windowNoTitle">true</item>
+
+    </style>
+
+</resources>
