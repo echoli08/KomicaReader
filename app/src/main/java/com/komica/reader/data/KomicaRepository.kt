@@ -1,13 +1,20 @@
 ﻿package com.komica.reader.data
 
+import android.content.Context
 import com.komica.reader.model.Board
 import com.komica.reader.model.BoardCategory
 import com.komica.reader.model.KomicaThread
+import com.komica.reader.model.ReplyForm
+import com.komica.reader.model.ReplySubmitRequest
+import com.komica.reader.model.ReplySubmitResult
 import com.komica.reader.model.ThreadDetail
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.ResponseBody
 import org.jsoup.Jsoup
 import java.io.ByteArrayInputStream
@@ -62,6 +69,47 @@ class KomicaRepository(
         }
     }
 
+    suspend fun LoadReplyForm(threadUrl: String): ReplyForm = withContext(Dispatchers.IO) {
+        val request = Request.Builder().url(threadUrl).build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) error("回覆表單讀取失敗：HTTP ${response.code}")
+            val html = DecodeHtml(response.body, threadUrl)
+            if (IsCloudflareChallenge(response.code, html)) error("網站要求 Cloudflare 驗證，請改用外部瀏覽器完成")
+            KomicaParser.ParseReplyForm(html, threadUrl)
+        }
+    }
+
+    suspend fun SubmitReply(context: Context, requestData: ReplySubmitRequest): ReplySubmitResult = withContext(Dispatchers.IO) {
+        val form = requestData.form
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .apply {
+                form.hiddenFields.forEach { (name, value) -> addFormDataPart(name, value) }
+                AddTextField(form.nameField, requestData.name)
+                AddTextField(form.emailField, requestData.email)
+                AddTextField(form.titleField, requestData.title)
+                AddTextField(form.contentField, requestData.content)
+                AddTextField(form.passwordField, requestData.password)
+                AddImagePart(context, form.fileField, requestData.imageUri)
+            }
+            .build()
+
+        val request = Request.Builder()
+            .url(form.actionUrl)
+            .header("Referer", requestData.threadUrl)
+            .post(body)
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            val html = DecodeHtml(response.body, form.actionUrl)
+            when {
+                IsCloudflareChallenge(response.code, html) -> ReplySubmitResult(false, true, "網站要求 Cloudflare 驗證，請改用外部瀏覽器完成")
+                response.isSuccessful -> ReplySubmitResult(true, false, ParseSubmitMessage(html).ifBlank { "回覆已送出" })
+                else -> ReplySubmitResult(false, false, "回覆送出失敗：HTTP ${response.code}")
+            }
+        }
+    }
+
     private fun DecodeHtml(body: ResponseBody?, url: String): String {
         val bytes = body?.bytes() ?: ByteArray(0)
         if (bytes.isEmpty()) return ""
@@ -99,6 +147,31 @@ class KomicaRepository(
             boardUrl.contains("pixmicat.php", ignoreCase = true) -> boardUrl.substringBeforeLast('/') + "/$page.htm"
             else -> boardUrl.substringBeforeLast('/', missingDelimiterValue = boardUrl) + "/$page.htm"
         }
+    }
+
+    private fun MultipartBody.Builder.AddTextField(name: String, value: String) {
+        if (name.isNotBlank() && value.isNotBlank()) addFormDataPart(name, value)
+    }
+
+    private fun MultipartBody.Builder.AddImagePart(context: Context, fieldName: String, imageUri: android.net.Uri?) {
+        if (fieldName.isBlank() || imageUri == null) return
+        val resolver = context.contentResolver
+        val bytes = resolver.openInputStream(imageUri)?.use { it.readBytes() } ?: return
+        val mimeType = resolver.getType(imageUri) ?: "application/octet-stream"
+        val fileName = imageUri.lastPathSegment?.substringAfterLast('/').orEmpty().ifBlank { "upload" }
+        addFormDataPart(fieldName, fileName, bytes.toRequestBody(mimeType.toMediaTypeOrNull()))
+    }
+
+    private fun IsCloudflareChallenge(code: Int, html: String): Boolean {
+        if (code == 403 || code == 429) return true
+        return html.contains("cf-chl", ignoreCase = true) ||
+            html.contains("cloudflare", ignoreCase = true) ||
+            html.contains("Just a moment", ignoreCase = true) ||
+            html.contains("Checking your browser", ignoreCase = true)
+    }
+
+    private fun ParseSubmitMessage(html: String): String {
+        return Jsoup.parse(html).body()?.text()?.take(120).orEmpty()
     }
 
     companion object {

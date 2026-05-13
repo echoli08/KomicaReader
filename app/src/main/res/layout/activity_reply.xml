@@ -9,30 +9,122 @@
         android:id="@+id/toolbar"
         android:layout_width="0dp"
         android:layout_height="64dp"
-        android:background="@color/kr_surface"
+        android:background="@color/kr_toolbar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:navigationIcon="@android:drawable/ic_media_previous"
         app:title="回覆"
-        app:titleTextColor="@color/kr_text" />
+        app:titleTextColor="@android:color/white" />
 
     <ProgressBar
         android:id="@+id/progressBar"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="0dp"
         android:layout_height="4dp"
+        android:indeterminate="true"
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/toolbar" />
 
-    <WebView
-        android:id="@+id/replyWebView"
+    <ScrollView
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:fillViewport="true"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/progressBar" />
+        app:layout_constraintTop_toBottomOf="@id/progressBar">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/statusText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/kr_muted"
+                android:textSize="14sp" />
+
+            <EditText
+                android:id="@+id/nameEdit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:hint="名稱"
+                android:inputType="textPersonName"
+                android:textColor="@color/kr_text"
+                android:textColorHint="@color/kr_muted" />
+
+            <EditText
+                android:id="@+id/emailEdit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Email"
+                android:inputType="textEmailAddress"
+                android:textColor="@color/kr_text"
+                android:textColorHint="@color/kr_muted" />
+
+            <EditText
+                android:id="@+id/titleEdit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="標題"
+                android:inputType="text"
+                android:textColor="@color/kr_text"
+                android:textColorHint="@color/kr_muted" />
+
+            <EditText
+                android:id="@+id/contentEdit"
+                android:layout_width="match_parent"
+                android:layout_height="180dp"
+                android:gravity="top|start"
+                android:hint="回覆內容"
+                android:inputType="textMultiLine|textCapSentences"
+                android:textColor="@color/kr_text"
+                android:textColorHint="@color/kr_muted" />
+
+            <EditText
+                android:id="@+id/passwordEdit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="刪除密碼"
+                android:inputType="textPassword"
+                android:textColor="@color/kr_text"
+                android:textColorHint="@color/kr_muted" />
+
+            <Button
+                android:id="@+id/imageButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="選擇圖片" />
+
+            <TextView
+                android:id="@+id/imageText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="@color/kr_muted"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/submitButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:text="送出回覆" />
+
+            <Button
+                android:id="@+id/browserButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="用外部瀏覽器開啟" />
+        </LinearLayout>
+    </ScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,171 +1,112 @@
 package com.komica.reader
 
-import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import android.webkit.WebResourceRequest
-import android.webkit.WebResourceError
-import android.webkit.WebResourceResponse
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import androidx.activity.OnBackPressedCallback
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.komica.reader.data.AppSettings
+import com.komica.reader.data.KomicaRepository
 import com.komica.reader.databinding.ActivityReplyBinding
+import com.komica.reader.model.ReplyForm
+import com.komica.reader.model.ReplySubmitRequest
 import com.komica.reader.util.WindowInsetsUtil
-import java.io.ByteArrayInputStream
+import kotlinx.coroutines.launch
 
 class ReplyActivity : AppCompatActivity() {
     private lateinit var binding: ActivityReplyBinding
-    private lateinit var settings: AppSettings
+    private val repository = KomicaRepository()
+    private var threadUrl = ""
+    private var replyForm: ReplyForm? = null
+    private var selectedImageUri: Uri? = null
 
-    @SuppressLint("SetJavaScriptEnabled")
+    private val imagePicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        selectedImageUri = uri
+        binding.imageText.text = uri?.lastPathSegment?.let { "已選擇：$it" }.orEmpty()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
-        settings = AppSettings(this)
-        settings.ApplyTheme()
+        AppSettings(this).ApplyTheme()
         super.onCreate(savedInstanceState)
         binding = ActivityReplyBinding.inflate(layoutInflater)
         setContentView(binding.root)
         WindowInsetsUtil.ApplyToolbarInsets(binding.toolbar)
 
-        val url = intent.getStringExtra(ExtraUrl).orEmpty()
-        if (url.isBlank()) {
+        threadUrl = intent.getStringExtra(ExtraUrl).orEmpty()
+        if (threadUrl.isBlank()) {
             finish()
             return
         }
 
         binding.toolbar.setNavigationOnClickListener { finish() }
         binding.toolbar.title = intent.getStringExtra(ExtraTitle).orEmpty().ifBlank { "回覆" }
-        ConfigureWebView()
-        ConfigureBackNavigation()
-        binding.replyWebView.loadUrl(url)
+        binding.imageButton.setOnClickListener { imagePicker.launch("image/*") }
+        binding.submitButton.setOnClickListener { SubmitReply() }
+        binding.browserButton.setOnClickListener { OpenExternalBrowser() }
+        LoadReplyForm()
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
-    private fun ConfigureWebView() {
-        binding.replyWebView.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            loadsImagesAutomatically = true
-            mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-            useWideViewPort = true
-            loadWithOverviewMode = true
+    private fun LoadReplyForm() {
+        SetLoading(true, "正在讀取網站回覆表單...")
+        lifecycleScope.launch {
+            val result = runCatching { repository.LoadReplyForm(threadUrl) }
+            replyForm = result.getOrNull()
+            SetLoading(false, result.exceptionOrNull()?.message ?: "已讀取網站表單，將依照原站欄位送出。")
+            binding.submitButton.isEnabled = replyForm != null
         }
-        binding.replyWebView.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                val normalizedUrl = NormalizeKomicaUrl(request.url.toString())
-                if (request.isForMainFrame && IsBoardIndexUrl(normalizedUrl)) {
-                    CompleteReplyFlow()
-                    return true
-                }
-                if (normalizedUrl != request.url.toString()) {
-                    view.loadUrl(normalizedUrl)
-                    return true
-                }
-                return false
-            }
+    }
 
-            override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                if (!settings.slimReplyPage) return null
-                val url = NormalizeKomicaUrl(request.url.toString())
-                if (IsCaptchaOrMainPage(url)) return null
-                val accept = request.requestHeaders["Accept"].orEmpty()
-                if (accept.startsWith("image/") || accept.contains("video/") || accept.contains("audio/")) {
-                    return WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
-                }
-                return null
-            }
+    private fun SubmitReply() {
+        val form = replyForm ?: return
+        val content = binding.contentEdit.text.toString()
+        if (content.isBlank() && selectedImageUri == null) {
+            Toast.makeText(this, "請輸入回覆內容或選擇圖片", Toast.LENGTH_SHORT).show()
+            return
+        }
 
-            override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
-                binding.progressBar.visibility = View.VISIBLE
-                val normalizedUrl = url?.let { NormalizeKomicaUrl(it) }.orEmpty()
-                if (IsBoardIndexUrl(normalizedUrl)) {
-                    CompleteReplyFlow()
-                }
-            }
-
-            override fun onPageFinished(view: WebView?, url: String?) {
-                binding.progressBar.visibility = View.GONE
-                RewriteLegacyKomicaHosts(view)
-            }
-
-            override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, errorResponse: WebResourceResponse) {
-                if (request.isForMainFrame && errorResponse.statusCode == 522 && IsBoardIndexUrl(NormalizeKomicaUrl(request.url.toString()))) {
-                    CompleteReplyFlow()
-                    return
-                }
-                super.onReceivedHttpError(view, request, errorResponse)
-            }
-
-            override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
-                if (request.isForMainFrame && IsBoardIndexUrl(NormalizeKomicaUrl(request.url.toString()))) {
-                    CompleteReplyFlow()
-                    return
-                }
-                super.onReceivedError(view, request, error)
+        SetLoading(true, "正在送出回覆...")
+        lifecycleScope.launch {
+            val request = ReplySubmitRequest(
+                form = form,
+                threadUrl = threadUrl,
+                name = binding.nameEdit.text.toString(),
+                email = binding.emailEdit.text.toString(),
+                title = binding.titleEdit.text.toString(),
+                content = content,
+                password = binding.passwordEdit.text.toString(),
+                imageUri = selectedImageUri
+            )
+            val result = runCatching { repository.SubmitReply(this@ReplyActivity, request) }
+            val submitResult = result.getOrNull()
+            SetLoading(false, submitResult?.message ?: result.exceptionOrNull()?.message.orEmpty().ifBlank { "回覆送出失敗" })
+            when {
+                submitResult?.success == true -> CompleteReplyFlow()
+                submitResult?.needsVerification == true -> OpenExternalBrowser()
+                else -> Toast.makeText(this@ReplyActivity, binding.statusText.text, Toast.LENGTH_LONG).show()
             }
         }
     }
 
-    private fun RewriteLegacyKomicaHosts(view: WebView?) {
-        view?.evaluateJavascript(
-            """
-            (function() {
-                document.querySelectorAll('form[action], a[href]').forEach(function(node) {
-                    var attr = node.tagName.toLowerCase() === 'form' ? 'action' : 'href';
-                    var value = node.getAttribute(attr);
-                    if (value) {
-                        node.setAttribute(attr, value.replace(/\.komica\.org/g, '.komica1.org'));
-                    }
-                });
-            })();
-            """.trimIndent(),
-            null
-        )
+    private fun SetLoading(isLoading: Boolean, message: String) {
+        binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        binding.submitButton.isEnabled = !isLoading && replyForm != null
+        binding.imageButton.isEnabled = !isLoading
+        binding.browserButton.isEnabled = !isLoading
+        binding.statusText.text = message
     }
 
-    private fun ConfigureBackNavigation() {
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (binding.replyWebView.canGoBack()) {
-                    binding.replyWebView.goBack()
-                } else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
-                }
-            }
-        })
-    }
-
-    private fun IsCaptchaOrMainPage(url: String): Boolean {
-        return url.endsWith(".php", ignoreCase = true) ||
-            url.contains("captcha", ignoreCase = true) ||
-            url.contains("regist", ignoreCase = true) ||
-            url.contains("pixmicat", ignoreCase = true)
-    }
-
-    private fun IsBoardIndexUrl(url: String): Boolean {
-        val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return false
-        val host = uri.host.orEmpty()
-        val path = uri.path.orEmpty()
-        return host.contains("komica", ignoreCase = true) &&
-            (path.endsWith("/index.htm", ignoreCase = true) || path.endsWith("/index.html", ignoreCase = true))
+    private fun OpenExternalBrowser() {
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(threadUrl)))
     }
 
     private fun CompleteReplyFlow() {
+        Toast.makeText(this, "回覆已送出", Toast.LENGTH_SHORT).show()
         setResult(Activity.RESULT_OK)
         finish()
-    }
-
-    private fun NormalizeKomicaUrl(url: String): String {
-        val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return url
-        val host = uri.host.orEmpty()
-        if (!host.endsWith(".komica.org", ignoreCase = true)) return url
-        val fixedHost = host.replace(".komica.org", ".komica1.org", ignoreCase = true)
-        return uri.buildUpon().authority(fixedHost).build().toString()
     }
 
     companion object {

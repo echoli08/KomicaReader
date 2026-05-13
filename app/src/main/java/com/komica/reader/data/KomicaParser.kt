@@ -4,6 +4,7 @@ import com.komica.reader.model.Board
 import com.komica.reader.model.BoardCategory
 import com.komica.reader.model.KomicaThread
 import com.komica.reader.model.Post
+import com.komica.reader.model.ReplyForm
 import com.komica.reader.model.ThreadDetail
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
@@ -89,6 +90,29 @@ object KomicaParser {
         )
     }
 
+    fun ParseReplyForm(html: String, threadUrl: String): ReplyForm {
+        val document = Jsoup.parse(html, threadUrl)
+        val form = document.select("form[action]").firstOrNull { element ->
+            element.select("textarea, input[type=file], input[name=com]").isNotEmpty()
+        } ?: error("找不到網站回覆表單")
+
+        val hiddenFields = form.select("input[type=hidden][name]").associate { input ->
+            input.attr("name") to input.attr("value")
+        }
+
+        return ReplyForm(
+            actionUrl = ResolveUrl(threadUrl, form.attr("action")),
+            method = form.attr("method").ifBlank { "post" }.lowercase(),
+            hiddenFields = hiddenFields,
+            nameField = FindFieldName(form, "name", "fname"),
+            emailField = FindFieldName(form, "email", "mail"),
+            titleField = FindFieldName(form, "sub", "title"),
+            contentField = FindFieldName(form, "com", "comment"),
+            passwordField = FindFieldName(form, "pwd", "password"),
+            fileField = FindFileFieldName(form)
+        )
+    }
+
     fun ParseQuoteContent(element: Element): String {
         val marker = "\uFFFF"
         val html = element.html()
@@ -128,6 +152,19 @@ object KomicaParser {
             description = "$categoryName 看板",
             categoryName = categoryName
         )
+    }
+
+    private fun FindFieldName(form: Element, vararg candidates: String): String {
+        candidates.forEach { candidate ->
+            form.select("[name]").firstOrNull { it.attr("name").equals(candidate, ignoreCase = true) }?.let {
+                return it.attr("name")
+            }
+        }
+        return ""
+    }
+
+    private fun FindFileFieldName(form: Element): String {
+        return form.select("input[type=file][name]").firstOrNull()?.attr("name").orEmpty()
     }
 
     private fun NormalizeBoardUrl(rawUrl: String): String {
