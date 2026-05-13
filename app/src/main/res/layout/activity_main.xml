@@ -9,7 +9,7 @@
         android:id="@+id/toolbar"
         android:layout_width="0dp"
         android:layout_height="64dp"
-        android:background="@color/kr_primary"
+        android:background="@color/kr_toolbar"
         android:paddingStart="16dp"
         android:paddingEnd="8dp"
         app:layout_constraintEnd_toEndOf="parent"

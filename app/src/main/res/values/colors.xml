@@ -12,6 +12,8 @@
 
     <color name="kr_primary">#FF9800</color>
 
+    <color name="kr_toolbar">#FF9800</color>
+
     <color name="kr_secondary">#2196F3</color>
 
     <color name="kr_warning">#F57C00</color>
