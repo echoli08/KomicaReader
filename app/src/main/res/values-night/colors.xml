@@ -14,6 +14,8 @@
 
     <color name="kr_toolbar">#1C211E</color>
 
+    <color name="kr_thumbnail_background">#121614</color>
+
     <color name="kr_secondary">#78C4D4</color>
 
     <color name="kr_warning">#D6AD72</color>
