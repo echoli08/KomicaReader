@@ -180,6 +180,7 @@ class KomicaRepository(
             .readTimeout(20, TimeUnit.SECONDS)
             .followRedirects(true)
             .followSslRedirects(true)
+            .cookieJar(KomicaSession.CookieJar)
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
                     .header("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36")

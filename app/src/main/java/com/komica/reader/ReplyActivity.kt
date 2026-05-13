@@ -23,6 +23,15 @@ class ReplyActivity : AppCompatActivity() {
     private var threadUrl = ""
     private var replyForm: ReplyForm? = null
     private var selectedImageUri: Uri? = null
+    private var hasRequestedVerification = false
+
+    private val verificationLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            LoadReplyForm()
+        } else if (replyForm == null) {
+            SetLoading(false, "尚未完成網站驗證，無法讀取回覆表單。")
+        }
+    }
 
     private val imagePicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         selectedImageUri = uri
@@ -47,7 +56,7 @@ class ReplyActivity : AppCompatActivity() {
         binding.imageButton.setOnClickListener { imagePicker.launch("image/*") }
         binding.submitButton.setOnClickListener { SubmitReply() }
         binding.browserButton.setOnClickListener { OpenExternalBrowser() }
-        LoadReplyForm()
+        StartVerification()
     }
 
     private fun LoadReplyForm() {
@@ -55,7 +64,13 @@ class ReplyActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val result = runCatching { repository.LoadReplyForm(threadUrl) }
             replyForm = result.getOrNull()
-            SetLoading(false, result.exceptionOrNull()?.message ?: "已讀取網站表單，將依照原站欄位送出。")
+            val errorMessage = result.exceptionOrNull()?.message
+            if (replyForm == null && errorMessage?.contains("Cloudflare", ignoreCase = true) == true) {
+                SetLoading(false, "網站要求驗證，請完成驗證後再回覆。")
+                StartVerification()
+                return@launch
+            }
+            SetLoading(false, errorMessage ?: "已讀取網站表單，將依照原站欄位送出。")
             binding.submitButton.isEnabled = replyForm != null
         }
     }
@@ -85,10 +100,16 @@ class ReplyActivity : AppCompatActivity() {
             SetLoading(false, submitResult?.message ?: result.exceptionOrNull()?.message.orEmpty().ifBlank { "回覆送出失敗" })
             when {
                 submitResult?.success == true -> CompleteReplyFlow()
-                submitResult?.needsVerification == true -> OpenExternalBrowser()
+                submitResult?.needsVerification == true -> StartVerification()
                 else -> Toast.makeText(this@ReplyActivity, binding.statusText.text, Toast.LENGTH_LONG).show()
             }
         }
+    }
+
+    private fun StartVerification() {
+        hasRequestedVerification = true
+        SetLoading(false, "請先完成網站驗證，完成後按下「我已完成驗證」。")
+        verificationLauncher.launch(Intent(this, VerificationActivity::class.java).putExtra(VerificationActivity.ExtraUrl, threadUrl))
     }
 
     private fun SetLoading(isLoading: Boolean, message: String) {
