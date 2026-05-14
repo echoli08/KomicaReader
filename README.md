@@ -13,6 +13,13 @@ KomicaReader 是以 Android Kotlin 重製的 Komica 瀏覽器，專案可使用 
 - 深色 / 淺色模式切換
 - 設定匯出與還原 JSON 備份
 
+## 預覽圖片
+
+![主頁預覽](Screenshot/Screenshot_20260514_094236.jpg)
+![主題列表預覽](Screenshot/Screenshot_20260514_094251.jpg)
+![討論串預覽](Screenshot/Screenshot_20260514_094255.jpg)
+![回覆頁預覽](Screenshot/Screenshot_20260514_094304.jpg)
+
 ## 編譯方式
 
 使用 Android Studio 開啟此資料夾後同步 Gradle，或於命令列執行：
