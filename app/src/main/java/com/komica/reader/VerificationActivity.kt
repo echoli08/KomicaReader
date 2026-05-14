@@ -17,6 +17,7 @@ import com.komica.reader.util.WindowInsetsUtil
 class VerificationActivity : AppCompatActivity() {
     private lateinit var binding: ActivityVerificationBinding
     private var url = ""
+    private var currentUrl = ""
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,6 +28,7 @@ class VerificationActivity : AppCompatActivity() {
         WindowInsetsUtil.ApplyToolbarInsets(binding.toolbar)
 
         url = intent.getStringExtra(ExtraUrl).orEmpty()
+        currentUrl = url
         if (url.isBlank()) {
             finish()
             return
@@ -56,13 +58,15 @@ class VerificationActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView?, pageUrl: String?) {
                 binding.progressBar.visibility = View.GONE
-                pageUrl?.let { KomicaSession.ImportWebViewCookies(it) }
+                currentUrl = pageUrl.orEmpty().ifBlank { currentUrl }
+                KomicaSession.ImportWebViewCookies(currentUrl)
             }
         }
     }
 
     private fun CompleteVerification() {
         CookieManager.getInstance().flush()
+        KomicaSession.ImportWebViewCookies(currentUrl)
         KomicaSession.ImportWebViewCookies(url)
         setResult(Activity.RESULT_OK)
         finish()

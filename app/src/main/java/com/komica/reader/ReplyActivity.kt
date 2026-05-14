@@ -33,6 +33,12 @@ class ReplyActivity : AppCompatActivity() {
         }
     }
 
+    private val webReplyLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            CompleteReplyFlow()
+        }
+    }
+
     private val imagePicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         selectedImageUri = uri
         binding.imageText.text = uri?.lastPathSegment?.let { "已選擇：$it" }.orEmpty()
@@ -55,7 +61,7 @@ class ReplyActivity : AppCompatActivity() {
         binding.toolbar.title = intent.getStringExtra(ExtraTitle).orEmpty().ifBlank { "回覆" }
         binding.imageButton.setOnClickListener { imagePicker.launch("image/*") }
         binding.submitButton.setOnClickListener { SubmitReply() }
-        binding.browserButton.setOnClickListener { OpenExternalBrowser() }
+        binding.browserButton.setOnClickListener { OpenWebReplyPage() }
         StartVerification()
     }
 
@@ -65,9 +71,9 @@ class ReplyActivity : AppCompatActivity() {
             val result = runCatching { repository.LoadReplyForm(threadUrl) }
             replyForm = result.getOrNull()
             val errorMessage = result.exceptionOrNull()?.message
-            if (replyForm == null && errorMessage?.contains("Cloudflare", ignoreCase = true) == true) {
-                SetLoading(false, "網站要求驗證，請完成驗證後再回覆。")
-                StartVerification()
+            if (replyForm == null && ShouldOpenVerification(errorMessage)) {
+                SetLoading(false, "原生回覆無法通過站台驗證，已切換至網站回覆頁。")
+                OpenWebReplyPage()
                 return@launch
             }
             SetLoading(false, errorMessage ?: "已讀取網站表單，將依照原站欄位送出。")
@@ -100,7 +106,7 @@ class ReplyActivity : AppCompatActivity() {
             SetLoading(false, submitResult?.message ?: result.exceptionOrNull()?.message.orEmpty().ifBlank { "回覆送出失敗" })
             when {
                 submitResult?.success == true -> CompleteReplyFlow()
-                submitResult?.needsVerification == true -> StartVerification()
+                submitResult?.needsVerification == true -> OpenWebReplyPage()
                 else -> Toast.makeText(this@ReplyActivity, binding.statusText.text, Toast.LENGTH_LONG).show()
             }
         }
@@ -112,6 +118,15 @@ class ReplyActivity : AppCompatActivity() {
         verificationLauncher.launch(Intent(this, VerificationActivity::class.java).putExtra(VerificationActivity.ExtraUrl, threadUrl))
     }
 
+    private fun ShouldOpenVerification(message: String?): Boolean {
+        val text = message.orEmpty()
+        return text.contains("驗證") ||
+            text.contains("Cloudflare", ignoreCase = true) ||
+            text.contains("503") ||
+            text.contains("403") ||
+            text.contains("429")
+    }
+
     private fun SetLoading(isLoading: Boolean, message: String) {
         binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
         binding.submitButton.isEnabled = !isLoading && replyForm != null
@@ -120,8 +135,11 @@ class ReplyActivity : AppCompatActivity() {
         binding.statusText.text = message
     }
 
-    private fun OpenExternalBrowser() {
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(threadUrl)))
+    private fun OpenWebReplyPage() {
+        webReplyLauncher.launch(Intent(this, WebReplyActivity::class.java).apply {
+            putExtra(WebReplyActivity.ExtraUrl, threadUrl)
+            putExtra(WebReplyActivity.ExtraTitle, binding.toolbar.title?.toString().orEmpty())
+        })
     }
 
     private fun CompleteReplyFlow() {

@@ -12,8 +12,8 @@ android {
         applicationId = "com.komica.reader"
         minSdk = 24
         targetSdk = 35
-        versionCode = 2260513
-        versionName = "V2.26.0513"
+        versionCode = 2260514
+        versionName = "V2.26.0514"
     }
 
     buildFeatures {
@@ -40,6 +40,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.4")
     implementation("androidx.activity:activity-ktx:1.9.2")
+    implementation("androidx.browser:browser:1.8.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.jsoup:jsoup:1.17.2")

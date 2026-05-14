@@ -220,9 +220,9 @@ class ThreadDetailActivity : AppCompatActivity() {
 
     private fun OpenReplyPage() {
         val currentThread = thread ?: return
-        replyLauncher.launch(Intent(this, ReplyActivity::class.java).apply {
-            putExtra(ReplyActivity.ExtraUrl, currentThread.url)
-            putExtra(ReplyActivity.ExtraTitle, "回覆：${detail?.title ?: currentThread.title}")
+        replyLauncher.launch(Intent(this, WebReplyActivity::class.java).apply {
+            putExtra(WebReplyActivity.ExtraUrl, currentThread.url)
+            putExtra(WebReplyActivity.ExtraTitle, "回覆：${detail?.title ?: currentThread.title}")
         })
     }
 

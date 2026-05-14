@@ -72,9 +72,9 @@ class KomicaRepository(
     suspend fun LoadReplyForm(threadUrl: String): ReplyForm = withContext(Dispatchers.IO) {
         val request = Request.Builder().url(threadUrl).build()
         client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) error("回覆表單讀取失敗：HTTP ${response.code}")
             val html = DecodeHtml(response.body, threadUrl)
-            if (IsCloudflareChallenge(response.code, html)) error("網站要求 Cloudflare 驗證，請改用外部瀏覽器完成")
+            if (IsCloudflareChallenge(response.code, html)) error("網站驗證尚未完成或站台暫時拒絕連線，請回到驗證頁重試")
+            if (!response.isSuccessful) error("回覆表單讀取失敗：HTTP ${response.code}")
             KomicaParser.ParseReplyForm(html, threadUrl)
         }
     }
@@ -103,7 +103,7 @@ class KomicaRepository(
         client.newCall(request).execute().use { response ->
             val html = DecodeHtml(response.body, form.actionUrl)
             when {
-                IsCloudflareChallenge(response.code, html) -> ReplySubmitResult(false, true, "網站要求 Cloudflare 驗證，請改用外部瀏覽器完成")
+                IsCloudflareChallenge(response.code, html) -> ReplySubmitResult(false, true, "網站驗證尚未完成或站台暫時拒絕連線，請回到驗證頁重試")
                 response.isSuccessful -> ReplySubmitResult(true, false, ParseSubmitMessage(html).ifBlank { "回覆已送出" })
                 else -> ReplySubmitResult(false, false, "回覆送出失敗：HTTP ${response.code}")
             }
@@ -163,11 +163,12 @@ class KomicaRepository(
     }
 
     private fun IsCloudflareChallenge(code: Int, html: String): Boolean {
-        if (code == 403 || code == 429) return true
+        if (code == 403 || code == 429 || code == 503) return true
         return html.contains("cf-chl", ignoreCase = true) ||
             html.contains("cloudflare", ignoreCase = true) ||
             html.contains("Just a moment", ignoreCase = true) ||
-            html.contains("Checking your browser", ignoreCase = true)
+            html.contains("Checking your browser", ignoreCase = true) ||
+            html.contains("Service Temporarily Unavailable", ignoreCase = true)
     }
 
     private fun ParseSubmitMessage(html: String): String {
