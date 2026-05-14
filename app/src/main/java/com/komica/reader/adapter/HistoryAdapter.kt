@@ -2,6 +2,8 @@
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.komica.reader.databinding.ItemHistoryBinding
 import com.komica.reader.model.KomicaThread
@@ -9,22 +11,17 @@ import com.komica.reader.model.KomicaThread
 class HistoryAdapter(
     private val onClick: (KomicaThread) -> Unit,
     private val onLongClick: (KomicaThread) -> Unit
-) : RecyclerView.Adapter<HistoryAdapter.HistoryViewHolder>() {
-    private val items = mutableListOf<KomicaThread>()
+) : ListAdapter<KomicaThread, HistoryAdapter.HistoryViewHolder>(DiffCallback) {
 
     fun SubmitItems(history: List<KomicaThread>) {
-        items.clear()
-        items.addAll(history)
-        notifyDataSetChanged()
+        submitList(history)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): HistoryViewHolder {
         return HistoryViewHolder(ItemHistoryBinding.inflate(LayoutInflater.from(parent.context), parent, false))
     }
 
-    override fun getItemCount(): Int = items.size
-
-    override fun onBindViewHolder(holder: HistoryViewHolder, position: Int) = holder.Bind(items[position])
+    override fun onBindViewHolder(holder: HistoryViewHolder, position: Int) = holder.Bind(getItem(position))
 
     inner class HistoryViewHolder(private val binding: ItemHistoryBinding) : RecyclerView.ViewHolder(binding.root) {
         fun Bind(thread: KomicaThread) {
@@ -34,6 +31,18 @@ class HistoryAdapter(
             binding.root.setOnLongClickListener {
                 onLongClick(thread)
                 true
+            }
+        }
+    }
+
+    companion object {
+        private val DiffCallback = object : DiffUtil.ItemCallback<KomicaThread>() {
+            override fun areItemsTheSame(oldItem: KomicaThread, newItem: KomicaThread): Boolean {
+                return oldItem.url == newItem.url
+            }
+
+            override fun areContentsTheSame(oldItem: KomicaThread, newItem: KomicaThread): Boolean {
+                return oldItem == newItem
             }
         }
     }

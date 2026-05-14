@@ -56,7 +56,7 @@ class BrowseActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        board?.let {
+        if (!hasLoadedOnce) board?.let {
             viewModel.LoadThreads(it)
             hasLoadedOnce = true
         }

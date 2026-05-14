@@ -14,7 +14,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:navigationIcon="@android:drawable/ic_media_previous"
-        app:title="網站回覆"
+        app:title="@string/title_web_reply"
         app:titleTextColor="@android:color/white" />
 
     <ProgressBar

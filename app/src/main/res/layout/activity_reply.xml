@@ -14,7 +14,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:navigationIcon="@android:drawable/ic_media_previous"
-        app:title="回覆"
+        app:title="@string/title_reply"
         app:titleTextColor="@android:color/white" />
 
     <ProgressBar
@@ -55,7 +55,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:hint="名稱"
+                android:hint="@string/hint_name"
                 android:inputType="textPersonName"
                 android:textColor="@color/kr_text"
                 android:textColorHint="@color/kr_muted" />
@@ -64,7 +64,7 @@
                 android:id="@+id/emailEdit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Email"
+                android:hint="@string/hint_email"
                 android:inputType="textEmailAddress"
                 android:textColor="@color/kr_text"
                 android:textColorHint="@color/kr_muted" />
@@ -73,7 +73,7 @@
                 android:id="@+id/titleEdit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="標題"
+                android:hint="@string/hint_title"
                 android:inputType="text"
                 android:textColor="@color/kr_text"
                 android:textColorHint="@color/kr_muted" />
@@ -83,7 +83,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="180dp"
                 android:gravity="top|start"
-                android:hint="回覆內容"
+                android:hint="@string/hint_reply_content"
                 android:inputType="textMultiLine|textCapSentences"
                 android:textColor="@color/kr_text"
                 android:textColorHint="@color/kr_muted" />
@@ -92,7 +92,7 @@
                 android:id="@+id/passwordEdit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="刪除密碼"
+                android:hint="@string/hint_delete_password"
                 android:inputType="textPassword"
                 android:textColor="@color/kr_text"
                 android:textColorHint="@color/kr_muted" />
@@ -102,7 +102,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:text="選擇圖片" />
+                android:text="@string/action_choose_image" />
 
             <TextView
                 android:id="@+id/imageText"
@@ -117,14 +117,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
-                android:text="送出回覆" />
+                android:text="@string/action_submit_reply" />
 
             <Button
                 android:id="@+id/browserButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="使用網站回覆頁" />
+                android:text="@string/action_use_web_reply" />
         </LinearLayout>
     </ScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>

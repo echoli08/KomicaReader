@@ -8,7 +8,7 @@ class HistoryStore(context: Context) {
     private val prefs = appContext.getSharedPreferences("KomicaReaderV2", Context.MODE_PRIVATE)
     private val dao = KomicaDatabase.Get(appContext).HistoryDao()
 
-    fun Add(thread: KomicaThread) {
+    suspend fun Add(thread: KomicaThread) {
         MigrateLegacyHistoryIfNeeded()
         dao.Upsert(
             HistoryEntity(
@@ -20,7 +20,7 @@ class HistoryStore(context: Context) {
         )
     }
 
-    fun GetAll(): List<KomicaThread> {
+    suspend fun GetAll(): List<KomicaThread> {
         MigrateLegacyHistoryIfNeeded()
         return dao.GetAll()
             .map { entity ->
@@ -36,17 +36,17 @@ class HistoryStore(context: Context) {
             }
     }
 
-    fun Clear() {
+    suspend fun Clear() {
         dao.Clear()
         prefs.edit().remove(KeyHistory).apply()
     }
 
-    fun Remove(url: String) {
+    suspend fun Remove(url: String) {
         MigrateLegacyHistoryIfNeeded()
         dao.DeleteByUrl(url)
     }
 
-    private fun MigrateLegacyHistoryIfNeeded() {
+    private suspend fun MigrateLegacyHistoryIfNeeded() {
         if (prefs.getBoolean(KeyHistoryMigrated, false)) return
         prefs.getStringSet(KeyHistory, emptySet()).orEmpty()
             .mapNotNull { line ->

@@ -8,6 +8,7 @@ import com.komica.reader.model.ReplyForm
 import com.komica.reader.model.ThreadDetail
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
+import java.net.URI
 
 object KomicaParser {
     private const val BaseUrl = "https://komica1.org"
@@ -130,13 +131,21 @@ object KomicaParser {
     fun ResolveUrl(baseUrl: String, href: String?): String {
         val value = href?.trim().orEmpty()
         if (value.isBlank()) return ""
-        if (value.startsWith("http://") || value.startsWith("https://")) return value
-        if (value.startsWith("//")) return "https:$value"
-        if (value.startsWith("/")) return BaseUrl + value
-
-        val cleanBase = baseUrl.substringBefore('?').substringBefore('#')
-        val prefix = cleanBase.substringBeforeLast('/', missingDelimiterValue = cleanBase) + "/"
-        return prefix + value
+        return runCatching {
+            val base = URI(baseUrl)
+            val resolved = if (value.startsWith("//")) {
+                URI("${base.scheme ?: "https"}:$value")
+            } else {
+                base.resolve(value)
+            }
+            resolved.toString()
+        }.getOrElse {
+            if (value.startsWith("http://") || value.startsWith("https://")) return value
+            if (value.startsWith("//")) return "https:$value"
+            val cleanBase = baseUrl.substringBefore('?').substringBefore('#')
+            val prefix = cleanBase.substringBeforeLast('/', missingDelimiterValue = cleanBase) + "/"
+            prefix + value
+        }
     }
 
     private fun ParseBoard(categoryName: String, boardElement: Element): Board? {

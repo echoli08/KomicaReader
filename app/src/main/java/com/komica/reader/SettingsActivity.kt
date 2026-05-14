@@ -7,6 +7,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bumptech.glide.Glide
 import com.komica.reader.adapter.SettingsAdapter
@@ -15,6 +16,9 @@ import com.komica.reader.data.HistoryStore
 import com.komica.reader.data.JsonBackupStore
 import com.komica.reader.databinding.ActivitySettingsBinding
 import com.komica.reader.util.WindowInsetsUtil
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 class SettingsActivity : AppCompatActivity() {
@@ -200,8 +204,10 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun ClearHistory() {
-        HistoryStore(this).Clear()
-        Toast.makeText(this, "瀏覽歷史已清除", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) { HistoryStore(this@SettingsActivity).Clear() }
+            Toast.makeText(this@SettingsActivity, "瀏覽歷史已清除", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun ShowAbout() {

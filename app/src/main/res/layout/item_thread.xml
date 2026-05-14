@@ -16,7 +16,7 @@
             android:id="@+id/threadThumbnail"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:contentDescription="主題預覽圖"
+            android:contentDescription="@string/label_thread_thumbnail"
             android:scaleType="fitCenter"
             android:visibility="gone" />
 
@@ -25,7 +25,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:gravity="center"
-            android:text="圖"
+            android:text="@string/label_has_image"
             android:textColor="@android:color/white"
             android:textSize="18sp"
             android:textStyle="bold" />

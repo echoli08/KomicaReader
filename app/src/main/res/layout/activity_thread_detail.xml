@@ -14,7 +14,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:titleTextColor="@android:color/white"
-        app:title="討論串" />
+        app:title="@string/title_thread_detail" />
 
     <ProgressBar
         android:id="@+id/progressBar"
@@ -54,7 +54,10 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:padding="16dp" />
+            android:paddingStart="16dp"
+            android:paddingTop="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="24dp" />
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <LinearLayout
@@ -105,7 +108,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="6dp"
-            android:contentDescription="回覆"
+            android:contentDescription="@string/action_reply"
             android:src="@android:drawable/ic_menu_edit"
             app:backgroundTint="@color/kr_fab"
             app:fabSize="mini"
@@ -116,7 +119,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginBottom="6dp"
-            android:contentDescription="分享"
+            android:contentDescription="@string/action_share"
             android:src="@android:drawable/ic_menu_share"
             app:backgroundTint="@color/kr_fab"
             app:fabSize="mini"
@@ -126,7 +129,7 @@
             android:id="@+id/fabScrollDown"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:contentDescription="跳到底部"
+            android:contentDescription="@string/action_scroll_bottom"
             android:src="@drawable/ic_arrow_down"
             app:backgroundTint="@color/kr_fab"
             app:fabSize="mini"

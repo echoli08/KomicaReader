@@ -22,6 +22,13 @@ class KomicaParserTest {
     }
 
     @Test
+    fun ResolveUrl_KeepsBoardSubdomainForRootPath() {
+        val result = KomicaParser.ResolveUrl("https://sora.komica1.org/80/index.htm", "/80/src/123.jpg")
+
+        assertEquals("https://sora.komica1.org/80/src/123.jpg", result)
+    }
+
+    @Test
     fun ParseThreadDetail_ReadsPostsAndImages() {
         val html = """
             <html><body>

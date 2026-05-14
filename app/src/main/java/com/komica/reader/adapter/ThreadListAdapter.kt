@@ -3,6 +3,8 @@
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.komica.reader.databinding.ItemThreadBinding
@@ -10,21 +12,18 @@ import com.komica.reader.model.KomicaThread
 
 class ThreadListAdapter(
     private val onThreadClick: (KomicaThread) -> Unit
-) : RecyclerView.Adapter<ThreadListAdapter.ThreadViewHolder>() {
-    private val items = mutableListOf<KomicaThread>()
+) : ListAdapter<KomicaThread, ThreadListAdapter.ThreadViewHolder>(DiffCallback) {
 
     fun SubmitThreads(threads: List<KomicaThread>) {
-        items.clear()
-        items.addAll(threads)
-        notifyDataSetChanged()
+        submitList(threads)
     }
 
     fun GetThreadAt(position: Int): KomicaThread? {
-        return items.getOrNull(position)
+        return currentList.getOrNull(position)
     }
 
     fun FindPositionByUrl(url: String): Int {
-        return items.indexOfFirst { it.url == url }
+        return currentList.indexOfFirst { it.url == url }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ThreadViewHolder {
@@ -32,10 +31,8 @@ class ThreadListAdapter(
         return ThreadViewHolder(binding)
     }
 
-    override fun getItemCount(): Int = items.size
-
     override fun onBindViewHolder(holder: ThreadViewHolder, position: Int) {
-        holder.Bind(items[position])
+        holder.Bind(getItem(position))
     }
 
     inner class ThreadViewHolder(
@@ -59,6 +56,18 @@ class ThreadListAdapter(
                     .into(binding.threadThumbnail)
             }
             binding.root.setOnClickListener { onThreadClick(thread) }
+        }
+    }
+
+    companion object {
+        private val DiffCallback = object : DiffUtil.ItemCallback<KomicaThread>() {
+            override fun areItemsTheSame(oldItem: KomicaThread, newItem: KomicaThread): Boolean {
+                return oldItem.url == newItem.url
+            }
+
+            override fun areContentsTheSame(oldItem: KomicaThread, newItem: KomicaThread): Boolean {
+                return oldItem == newItem
+            }
         }
     }
 }

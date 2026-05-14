@@ -22,7 +22,7 @@
         android:layout_marginTop="8dp"
         android:adjustViewBounds="true"
         android:background="@drawable/bg_thumb"
-        android:contentDescription="討論串圖片"
+        android:contentDescription="@string/label_thread_image"
         android:scaleType="fitCenter"
         android:visibility="gone" />
 

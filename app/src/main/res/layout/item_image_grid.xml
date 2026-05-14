@@ -9,6 +9,6 @@
         android:id="@+id/gridImage"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:contentDescription="討論串圖片"
+        android:contentDescription="@string/label_thread_image"
         android:scaleType="centerCrop" />
 </FrameLayout>

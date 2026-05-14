@@ -9,6 +9,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:adjustViewBounds="true"
-        android:contentDescription="圖片預覽"
+        android:contentDescription="@string/label_image_preview"
         android:scaleType="matrix" />
 </FrameLayout>

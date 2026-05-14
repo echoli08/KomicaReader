@@ -2,6 +2,8 @@
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.komica.reader.databinding.ItemBoardBinding
 import com.komica.reader.databinding.ItemBoardCategoryBinding
@@ -14,9 +16,8 @@ class BoardListAdapter(
     private val onFavoriteClick: (Board) -> Unit,
     private val isCategoryCollapsed: (BoardCategory) -> Boolean,
     private val isFavorite: (Board) -> Boolean
-) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+) : ListAdapter<BoardListAdapter.BoardListItem, RecyclerView.ViewHolder>(DiffCallback) {
     private var categories: List<BoardCategory> = emptyList()
-    private val items = mutableListOf<BoardListItem>()
 
     fun SubmitCategories(categories: List<BoardCategory>) {
         this.categories = categories
@@ -28,18 +29,19 @@ class BoardListAdapter(
     }
 
     private fun RebuildItems() {
-        items.clear()
+        val newItems = mutableListOf<BoardListItem>()
         categories.forEach { category ->
-            items.add(BoardListItem.Category(category))
+            val isCollapsed = isCategoryCollapsed(category)
+            newItems.add(BoardListItem.Category(category, isCollapsed))
             if (!isCategoryCollapsed(category)) {
-                category.boards.forEach { board -> items.add(BoardListItem.BoardRow(board)) }
+                category.boards.forEach { board -> newItems.add(BoardListItem.BoardRow(board, isFavorite(board))) }
             }
         }
-        notifyDataSetChanged()
+        submitList(newItems)
     }
 
     override fun getItemViewType(position: Int): Int {
-        return when (items[position]) {
+        return when (getItem(position)) {
             is BoardListItem.Category -> ViewTypeCategory
             is BoardListItem.BoardRow -> ViewTypeBoard
         }
@@ -54,21 +56,20 @@ class BoardListAdapter(
         }
     }
 
-    override fun getItemCount(): Int = items.size
-
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        when (val item = items[position]) {
-            is BoardListItem.Category -> (holder as CategoryViewHolder).Bind(item.category)
-            is BoardListItem.BoardRow -> (holder as BoardViewHolder).Bind(item.board)
+        when (val item = getItem(position)) {
+            is BoardListItem.Category -> (holder as CategoryViewHolder).Bind(item)
+            is BoardListItem.BoardRow -> (holder as BoardViewHolder).Bind(item)
         }
     }
 
     private inner class CategoryViewHolder(
         private val binding: ItemBoardCategoryBinding
     ) : RecyclerView.ViewHolder(binding.root) {
-        fun Bind(category: BoardCategory) {
+        fun Bind(item: BoardListItem.Category) {
+            val category = item.category
             binding.categoryTitle.text = category.name
-            binding.categoryMeta.text = if (isCategoryCollapsed(category)) "${category.boards.size} 個看板，已收合" else "${category.boards.size} 個看板"
+            binding.categoryMeta.text = if (item.isCollapsed) "${category.boards.size} 個看板，已收合" else "${category.boards.size} 個看板"
             binding.root.setOnClickListener { onCategoryClick(category) }
         }
     }
@@ -76,23 +77,38 @@ class BoardListAdapter(
     private inner class BoardViewHolder(
         private val binding: ItemBoardBinding
     ) : RecyclerView.ViewHolder(binding.root) {
-        fun Bind(board: Board) {
+        fun Bind(item: BoardListItem.BoardRow) {
+            val board = item.board
             binding.boardName.text = board.name
             binding.boardDescription.text = board.description.ifBlank { "${board.categoryName} 看板" }
             binding.boardPath.text = board.url
-            binding.favoriteButton.text = if (isFavorite(board)) "★" else "☆"
+            binding.favoriteButton.text = if (item.isFavorite) "★" else "☆"
             binding.root.setOnClickListener { onBoardClick(board) }
             binding.favoriteButton.setOnClickListener { onFavoriteClick(board) }
         }
     }
 
-    private sealed interface BoardListItem {
-        data class Category(val category: BoardCategory) : BoardListItem
-        data class BoardRow(val board: Board) : BoardListItem
+    sealed interface BoardListItem {
+        data class Category(val category: BoardCategory, val isCollapsed: Boolean) : BoardListItem
+        data class BoardRow(val board: Board, val isFavorite: Boolean) : BoardListItem
     }
 
     companion object {
         private const val ViewTypeCategory = 1
         private const val ViewTypeBoard = 2
+
+        private val DiffCallback = object : DiffUtil.ItemCallback<BoardListItem>() {
+            override fun areItemsTheSame(oldItem: BoardListItem, newItem: BoardListItem): Boolean {
+                return when {
+                    oldItem is BoardListItem.Category && newItem is BoardListItem.Category -> oldItem.category.name == newItem.category.name
+                    oldItem is BoardListItem.BoardRow && newItem is BoardListItem.BoardRow -> oldItem.board.url == newItem.board.url
+                    else -> false
+                }
+            }
+
+            override fun areContentsTheSame(oldItem: BoardListItem, newItem: BoardListItem): Boolean {
+                return oldItem == newItem
+            }
+        }
     }
 }

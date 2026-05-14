@@ -4,11 +4,15 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.komica.reader.adapter.HistoryAdapter
 import com.komica.reader.data.HistoryStore
 import com.komica.reader.databinding.ActivityHistoryBinding
 import com.komica.reader.util.WindowInsetsUtil
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class HistoryActivity : AppCompatActivity() {
     private lateinit var binding: ActivityHistoryBinding
@@ -40,12 +44,17 @@ class HistoryActivity : AppCompatActivity() {
     }
 
     private fun RefreshHistory() {
-        adapter.SubmitItems(store.GetAll())
+        lifecycleScope.launch {
+            val history = withContext(Dispatchers.IO) { store.GetAll() }
+            adapter.SubmitItems(history)
+        }
     }
 
     private fun DeleteHistoryItem(url: String) {
-        store.Remove(url)
-        RefreshHistory()
-        Toast.makeText(this, "已刪除此筆歷史", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) { store.Remove(url) }
+            RefreshHistory()
+            Toast.makeText(this@HistoryActivity, "已刪除此筆歷史", Toast.LENGTH_SHORT).show()
+        }
     }
 }

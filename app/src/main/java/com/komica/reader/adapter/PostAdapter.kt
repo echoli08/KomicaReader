@@ -13,6 +13,8 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.komica.reader.R
@@ -27,15 +29,12 @@ class PostAdapter(
     private val onQuotePreviewHide: () -> Unit,
     private val onImageClick: (Int, List<String>) -> Unit,
     private val onImageLongClick: (String) -> Unit
-) : RecyclerView.Adapter<PostAdapter.PostViewHolder>() {
-    private val items = mutableListOf<Post>()
+) : ListAdapter<Post, PostAdapter.PostViewHolder>(DiffCallback) {
     private val postNumberToPosition = mutableMapOf<Int, Int>()
     private val postPositionToImageIndex = mutableMapOf<Int, Int>()
     private val imageUrls = mutableListOf<String>()
 
     fun SubmitPosts(posts: List<Post>) {
-        items.clear()
-        items.addAll(posts)
         postNumberToPosition.clear()
         postPositionToImageIndex.clear()
         imageUrls.clear()
@@ -46,16 +45,14 @@ class PostAdapter(
                 imageUrls.add(post.imageUrl)
             }
         }
-        notifyDataSetChanged()
+        submitList(posts)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PostViewHolder {
         return PostViewHolder(ItemPostBinding.inflate(LayoutInflater.from(parent.context), parent, false))
     }
 
-    override fun getItemCount(): Int = items.size
-
-    override fun onBindViewHolder(holder: PostViewHolder, position: Int) = holder.Bind(items[position], position)
+    override fun onBindViewHolder(holder: PostViewHolder, position: Int) = holder.Bind(getItem(position), position)
 
     inner class PostViewHolder(private val binding: ItemPostBinding) : RecyclerView.ViewHolder(binding.root) {
         private val handler = Handler(Looper.getMainLooper())
@@ -145,7 +142,7 @@ class PostAdapter(
                         previewShown = false
                         pendingPreview = Runnable {
                             previewShown = true
-                            onQuotePreviewShow(items[quotePosition], binding.postContent, pressedQuoteX, pressedQuoteY)
+                            onQuotePreviewShow(getItem(quotePosition), binding.postContent, pressedQuoteX, pressedQuoteY)
                         }
                         handler.postDelayed(pendingPreview!!, LongPressDelayMs)
                         true
@@ -229,6 +226,16 @@ class PostAdapter(
         private const val LongPressDelayMs = 350L
 
         private data class UrlMarker(val url: String)
+
+        private val DiffCallback = object : DiffUtil.ItemCallback<Post>() {
+            override fun areItemsTheSame(oldItem: Post, newItem: Post): Boolean {
+                return oldItem.id == newItem.id
+            }
+
+            override fun areContentsTheSame(oldItem: Post, newItem: Post): Boolean {
+                return oldItem == newItem
+            }
+        }
 
         private fun ExtractPostNumber(matcher: java.util.regex.Matcher): Int? {
             return matcher.group(1)?.toIntOrNull() ?: matcher.group(2)?.toIntOrNull()

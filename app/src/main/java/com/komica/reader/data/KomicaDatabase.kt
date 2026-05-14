@@ -24,7 +24,6 @@ abstract class KomicaDatabase : RoomDatabase() {
                     KomicaDatabase::class.java,
                     "komica_reader.db"
                 )
-                    .allowMainThreadQueries()
                     .build()
                     .also { instance = it }
             }

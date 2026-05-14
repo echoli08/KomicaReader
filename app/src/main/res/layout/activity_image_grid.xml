@@ -14,7 +14,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:navigationIcon="@android:drawable/ic_media_previous"
-        app:title="圖片牆"
+        app:title="@string/title_image_grid"
         app:titleTextColor="@color/kr_text" />
 
     <androidx.recyclerview.widget.RecyclerView

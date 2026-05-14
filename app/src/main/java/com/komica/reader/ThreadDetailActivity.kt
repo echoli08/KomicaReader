@@ -103,7 +103,7 @@ class ThreadDetailActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        thread?.let {
+        if (!hasLoadedOnce) thread?.let {
             viewModel.LoadThread(it.url)
             hasLoadedOnce = true
         }
@@ -121,7 +121,11 @@ class ThreadDetailActivity : AppCompatActivity() {
                     detail = state.data
                     binding.toolbar.title = state.data.title
                     adapter.SubmitPosts(state.data.posts)
-                    thread?.let { HistoryStore(this).Add(it.copy(title = state.data.title)) }
+                    thread?.let { currentThread ->
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            HistoryStore(this@ThreadDetailActivity).Add(currentThread.copy(title = state.data.title))
+                        }
+                    }
                 }
                 is UiState.Empty -> binding.messageText.text = state.message
                 is UiState.Error -> {
