@@ -1,6 +1,7 @@
 ﻿package com.komica.reader
 
 import android.app.AlertDialog
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
@@ -20,6 +21,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class SettingsActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySettingsBinding
@@ -156,7 +160,7 @@ class SettingsActivity : AppCompatActivity() {
     private fun ShowJsonBackup() {
         AlertDialog.Builder(this)
             .setTitle("JSON 備份")
-            .setItems(arrayOf("匯出 JSON 檔案", "還原最新 JSON 檔案")) { _, which ->
+            .setItems(arrayOf("匯出 JSON 檔案", "選擇 JSON 備份還原")) { _, which ->
                 if (which == 0) ExportJsonBackup() else ImportJsonBackup()
             }
             .show()
@@ -170,13 +174,27 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun ImportJsonBackup() {
-        val text = runCatching { ReadLatestBackupFile() }.getOrNull().orEmpty()
+        val backupFiles = runCatching { ListBackupFiles() }.getOrDefault(emptyList())
+        if (backupFiles.isEmpty()) {
+            Toast.makeText(this, "還原失敗：Download/KomicaReader 找不到有效 JSON 備份", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val labels = backupFiles.map { it.DisplayText() }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle("選擇要還原的備份")
+            .setItems(labels) { _, which -> RestoreBackupFile(backupFiles[which]) }
+            .show()
+    }
+
+    private fun RestoreBackupFile(backupFile: BackupFile) {
+        val text = runCatching { ReadBackupFile(backupFile) }.getOrNull().orEmpty()
         val success = text.isNotBlank() && runCatching { JsonBackupStore(this).ImportJson(text) }.isSuccess
         if (success) {
             settings = AppSettings(this)
             RefreshItems()
         }
-        Toast.makeText(this, if (success) "已還原最新 JSON 備份" else "還原失敗：Download/KomicaReader 找不到有效 JSON 備份", Toast.LENGTH_LONG).show()
+        Toast.makeText(this, if (success) "已還原：${backupFile.name}" else "還原失敗：無法讀取或解析此 JSON 備份", Toast.LENGTH_LONG).show()
     }
 
     private fun ShowNumberPicker(title: String, labels: Array<String>, checked: Int, onSelected: (Int) -> Unit) {
@@ -285,35 +303,71 @@ class SettingsActivity : AppCompatActivity() {
         File(dir, fileName).writeText(text, Charsets.UTF_8)
     }
 
-    private fun ReadLatestBackupFile(): String {
+    private fun ListBackupFiles(): List<BackupFile> {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val projection = arrayOf(
                 MediaStore.Downloads._ID,
+                MediaStore.Downloads.DISPLAY_NAME,
                 MediaStore.Downloads.DATE_MODIFIED
             )
             val selection = "${MediaStore.Downloads.RELATIVE_PATH}=? AND ${MediaStore.Downloads.DISPLAY_NAME} LIKE ?"
             val args = arrayOf("${Environment.DIRECTORY_DOWNLOADS}/KomicaReader/", "%.json")
-            contentResolver.query(
+            return contentResolver.query(
                 MediaStore.Downloads.EXTERNAL_CONTENT_URI,
                 projection,
                 selection,
                 args,
                 "${MediaStore.Downloads.DATE_MODIFIED} DESC"
             )?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Downloads._ID))
-                    val uri = android.content.ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, id)
-                    return contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+                buildList {
+                    val idIndex = cursor.getColumnIndexOrThrow(MediaStore.Downloads._ID)
+                    val nameIndex = cursor.getColumnIndexOrThrow(MediaStore.Downloads.DISPLAY_NAME)
+                    val dateIndex = cursor.getColumnIndexOrThrow(MediaStore.Downloads.DATE_MODIFIED)
+                    while (cursor.moveToNext()) {
+                        val id = cursor.getLong(idIndex)
+                        val uri = android.content.ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, id)
+                        add(
+                            BackupFile(
+                                name = cursor.getString(nameIndex).orEmpty(),
+                                modifiedAt = cursor.getLong(dateIndex) * 1000L,
+                                uri = uri
+                            )
+                        )
+                    }
                 }
-            }
+            }.orEmpty()
         }
 
         val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "KomicaReader")
         return dir.listFiles()
             .orEmpty()
             .filter { it.isFile && it.extension.equals("json", ignoreCase = true) }
-            .maxByOrNull { it.lastModified() }
-            ?.readText(Charsets.UTF_8)
-            .orEmpty()
+            .sortedByDescending { it.lastModified() }
+            .map { file ->
+                BackupFile(
+                    name = file.name,
+                    modifiedAt = file.lastModified(),
+                    file = file
+                )
+            }
+    }
+
+    private fun ReadBackupFile(backupFile: BackupFile): String {
+        backupFile.uri?.let { uri ->
+            return contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+        }
+        return backupFile.file?.readText(Charsets.UTF_8).orEmpty()
+    }
+
+    private data class BackupFile(
+        val name: String,
+        val modifiedAt: Long,
+        val uri: Uri? = null,
+        val file: File? = null
+    ) {
+        fun DisplayText(): String {
+            val dateText = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.TAIWAN).format(Date(modifiedAt))
+            return "$name\n$dateText"
+        }
     }
 }
