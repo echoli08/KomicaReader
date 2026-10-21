@@ -13,6 +13,15 @@ import java.net.URI
 object KomicaParser {
     private const val BaseUrl = "https://komica1.org"
 
+    // 繁體中文註解：站方目前無法連線（522/523）或網域已不存在的看板，直接從選單移除。
+    private val UnavailableBoardHosts = setOf(
+        "2cat.komica1.org",
+        "grea.komica1.org",
+        "luna.komica1.org",
+        "sora.komica1.org",
+        "tomo.komica1.org"
+    )
+
     fun ParseBoards(html: String): List<BoardCategory> {
         val excludedCategories = setOf("聊天室", "外部連結", "失效連結")
         val document = Jsoup.parse(html, BaseUrl)
@@ -154,7 +163,7 @@ object KomicaParser {
         if (name.isBlank() || rawUrl.isBlank()) return null
         val cleanUrl = NormalizeBoardUrl(rawUrl)
         val resolvedUrl = ResolveUrl(BaseUrl, cleanUrl)
-        if (!IsSupportedBoardUrl(resolvedUrl)) return null
+        if (!IsSupportedBoardUrl(resolvedUrl) || IsUnavailableBoardUrl(resolvedUrl)) return null
         return Board(
             name = name,
             url = resolvedUrl,
@@ -177,15 +186,29 @@ object KomicaParser {
     }
 
     private fun NormalizeBoardUrl(rawUrl: String): String {
-        val value = rawUrl.trim()
-        if (value.endsWith("?")) return value.dropLast(1)
+        val value = rawUrl.trim().trimEnd('?')
+        // 繁體中文註解：現行選單以模組列表呈現分類看板，改走頁面瀏覽模式才能沿用既有討論串解析與分頁。
+        if (value.contains("mode=module", ignoreCase = true) &&
+            value.contains("mod_threadlist", ignoreCase = true)
+        ) {
+            val category = Regex("[?&]c=([^&]+)").find(value)?.groupValues?.getOrNull(1)
+            if (!category.isNullOrBlank()) {
+                return value.substringBefore('?').substringBeforeLast('/') + "/pixmicat2.php?c=$category"
+            }
+        }
         return value
+    }
+
+    private fun IsUnavailableBoardUrl(url: String): Boolean {
+        val host = runCatching { URI(url).host }.getOrNull().orEmpty()
+        return UnavailableBoardHosts.any { it.equals(host, ignoreCase = true) }
     }
 
     private fun IsSupportedBoardUrl(url: String): Boolean {
         return url.contains("index.htm", ignoreCase = true) ||
             url.contains("index.html", ignoreCase = true) ||
-            url.contains("pixmicat.php", ignoreCase = true)
+            url.contains("pixmicat.php", ignoreCase = true) ||
+            url.contains("pixmicat2.php", ignoreCase = true)
     }
 
     private fun ParsePost(index: Int, postElement: Element, threadUrl: String): Post? {

@@ -140,6 +140,16 @@ class KomicaRepository(
 
     private fun BuildThreadPageUrl(boardUrl: String, page: Int): String {
         if (page <= 0) return boardUrl
+        // 繁體中文註解：分類看板走 pixmicat2 頁面瀏覽模式，分頁參數是 page_num（第一頁為 0）。
+        if (boardUrl.contains("pixmicat2.php", ignoreCase = true)) {
+            val category = Regex("[?&]c=([^&]+)").find(boardUrl)?.groupValues?.getOrNull(1)
+            val base = boardUrl.substringBefore('?').substringBeforeLast('/')
+            return if (category.isNullOrBlank()) {
+                "$base/pixmicat2.php?page_num=$page"
+            } else {
+                "$base/pixmicat2.php?page_num=$page&c=$category"
+            }
+        }
         return when {
             boardUrl.endsWith("index.htm", ignoreCase = true) -> boardUrl.replace(Regex("index\\.htm$", RegexOption.IGNORE_CASE), "$page.htm")
             boardUrl.endsWith("index.html", ignoreCase = true) -> boardUrl.replace(Regex("index\\.html$", RegexOption.IGNORE_CASE), "$page.htm")
