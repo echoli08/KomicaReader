@@ -150,9 +150,14 @@ class KomicaRepository(
                 "$base/pixmicat2.php?page_num=$page&c=$category"
             }
         }
+        // 繁體中文註解：站方只保留部分 N.htm 靜態頁，其餘頁碼會 404，改用 pixmicat.php?page_num= 才能讀到舊串。
+        if (boardUrl.contains("index.htm", ignoreCase = true) ||
+            boardUrl.contains("index.html", ignoreCase = true)
+        ) {
+            val base = boardUrl.substringBefore('?').substringBeforeLast('/')
+            return "$base/pixmicat.php?page_num=$page"
+        }
         return when {
-            boardUrl.endsWith("index.htm", ignoreCase = true) -> boardUrl.replace(Regex("index\\.htm$", RegexOption.IGNORE_CASE), "$page.htm")
-            boardUrl.endsWith("index.html", ignoreCase = true) -> boardUrl.replace(Regex("index\\.html$", RegexOption.IGNORE_CASE), "$page.htm")
             boardUrl.endsWith("/") -> "$boardUrl$page.htm"
             boardUrl.contains("pixmicat.php", ignoreCase = true) -> boardUrl.substringBeforeLast('/') + "/$page.htm"
             else -> boardUrl.substringBeforeLast('/', missingDelimiterValue = boardUrl) + "/$page.htm"
