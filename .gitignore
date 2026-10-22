@@ -5,6 +5,9 @@
 build/
 app/build/
 local.properties
+keystore.properties
+*.keystore
+*.jks
 captures/
 .externalNativeBuild/
 .cxx/

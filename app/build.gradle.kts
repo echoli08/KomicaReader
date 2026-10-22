@@ -1,7 +1,17 @@
-﻿plugins {
+﻿import java.util.Properties
+
+plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.kapt")
+}
+
+// 繁體中文註解：金鑰與密碼放在未進版控的 keystore.properties，讓各機建置使用同一把簽章金鑰。
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
 }
 
 android {
@@ -12,8 +22,32 @@ android {
         applicationId = "com.komica.reader"
         minSdk = 24
         targetSdk = 35
-        versionCode = 2261022
-        versionName = "V2.26.1022"
+        versionCode = 2261023
+        versionName = "V2.26.1023"
+    }
+
+    signingConfigs {
+        if (keystorePropertiesFile.exists()) {
+            create("komica") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("debug") {
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("komica")
+            }
+        }
+        getByName("release") {
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("komica")
+            }
+        }
     }
 
     buildFeatures {
