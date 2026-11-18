@@ -5,8 +5,20 @@
     android:layout_marginTop="8dp"
     android:background="@drawable/bg_card"
     android:orientation="vertical"
-    android:padding="12dp">
+    android:padding="16dp">
 
-    <TextView android:id="@+id/historyTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/kr_text" android:textSize="16sp" android:textStyle="bold" />
-    <TextView android:id="@+id/historyUrl" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/kr_secondary" android:textSize="12sp" />
+    <TextView
+        android:id="@+id/historyTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textAppearance="?attr/textAppearanceTitleMedium"
+        android:textColor="@color/kr_text" />
+
+    <TextView
+        android:id="@+id/historyUrl"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textAppearance="?attr/textAppearanceBodySmall"
+        android:textColor="@color/kr_secondary" />
 </LinearLayout>

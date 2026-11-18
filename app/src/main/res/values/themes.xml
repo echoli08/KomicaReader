@@ -1,24 +1,75 @@
 <resources>
 
-    <style name="Theme.KomicaReader" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <!-- Material 3 主題：色彩角色全部映射至 Komica 琥珀 token，避免落入基底紫色。
+         kr_toolbar 兩種模式皆為深色：WindowInsetsUtil.ApplyBrandStatusBar 會以此色
+         設定狀態列並強制白色圖示，故頂欄保持深琥珀棕。 -->
 
-        <item name="android:fontFamily">sans</item>
-
-        <item name="android:windowLightStatusBar">true</item>
-
-        <item name="android:statusBarColor">@color/kr_background</item>
-
-        <item name="android:navigationBarColor">@color/kr_surface</item>
-
-        <item name="android:colorAccent">@color/kr_primary</item>
+    <style name="Theme.KomicaReader" parent="Theme.Material3.DayNight.NoActionBar">
 
         <item name="colorPrimary">@color/kr_primary</item>
 
+        <item name="colorOnPrimary">@color/kr_on_primary</item>
+
+        <item name="colorPrimaryContainer">@color/kr_fab</item>
+
+        <item name="colorOnPrimaryContainer">@color/kr_on_fab</item>
+
         <item name="colorSecondary">@color/kr_secondary</item>
+
+        <item name="colorSecondaryContainer">@color/kr_fab</item>
+
+        <item name="colorOnSecondaryContainer">@color/kr_on_fab</item>
+
+        <item name="android:colorBackground">@color/kr_background</item>
+
+        <item name="colorOnBackground">@color/kr_text</item>
+
+        <item name="colorSurface">@color/kr_surface</item>
+
+        <item name="colorOnSurface">@color/kr_text</item>
+
+        <item name="colorSurfaceVariant">@color/kr_thumbnail_background</item>
+
+        <item name="colorOnSurfaceVariant">@color/kr_muted</item>
+
+        <item name="colorOutline">@color/kr_outline</item>
+
+        <item name="android:statusBarColor">@color/kr_toolbar</item>
+
+        <item name="android:navigationBarColor">@color/kr_surface</item>
+
+        <item name="android:windowLightStatusBar">false</item>
+
+        <item name="android:windowLightNavigationBar">true</item>
 
         <item name="android:windowNoTitle">true</item>
 
     </style>
 
-</resources>
+    <!-- 全 App 共用的品牌頂欄：深琥珀表面、白標題、白圖示（含返回鍵與選單） -->
 
+    <style name="Widget.Komica.Toolbar" parent="Widget.Material3.Toolbar">
+
+        <item name="android:background">@color/kr_toolbar</item>
+
+        <item name="titleTextColor">@android:color/white</item>
+
+        <item name="subtitleTextColor">#B3FFFFFF</item>
+
+        <item name="navigationIconTint">@android:color/white</item>
+
+        <item name="android:elevation">0dp</item>
+
+        <item name="android:theme">@style/ThemeOverlay.Komica.Toolbar</item>
+
+    </style>
+
+    <style name="ThemeOverlay.Komica.Toolbar" parent="ThemeOverlay.Material3.Dark.ActionBar">
+
+        <item name="colorControlNormal">@android:color/white</item>
+
+        <item name="actionMenuTextColor">@android:color/white</item>
+
+    </style>
+
+</resources>

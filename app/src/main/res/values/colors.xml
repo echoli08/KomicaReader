@@ -1,30 +1,37 @@
 <resources>
 
-    <color name="kr_background">#F5F5F5</color>
+    <!-- Material 3 語意色彩 × Komica 琥珀品牌；對比備註見 docs/設計_20261118_Material介面重設計.md -->
 
-    <color name="kr_surface">#FFFFFF</color>
+    <color name="kr_background">#F7F2E9</color>
 
-    <color name="kr_surface_alt">#FFE0B2</color>
+    <color name="kr_surface">#FFFCF5</color>
 
-    <color name="kr_text">#212121</color>
+    <color name="kr_surface_alt">#FFE2BC</color>
 
-    <color name="kr_muted">#666666</color>
+    <color name="kr_text">#211B10</color>
 
-    <color name="kr_primary">#FF9800</color>
+    <color name="kr_muted">#655840</color>
 
-    <color name="kr_toolbar">#FF9800</color>
+    <color name="kr_primary">#B25E00</color>
 
-    <color name="kr_thumbnail_background">#F5F5F5</color>
+    <color name="kr_on_primary">#FFFFFF</color>
 
-    <color name="kr_secondary">#2196F3</color>
+    <color name="kr_toolbar">#4A2C00</color>
 
-    <color name="kr_warning">#F57C00</color>
+    <color name="kr_thumbnail_background">#EFE7D8</color>
 
-    <color name="kr_fab">#D8892B</color>
+    <color name="kr_secondary">#1565C0</color>
 
-    <color name="kr_thread_meta">#9E9E9E</color>
+    <color name="kr_warning">#E65100</color>
 
-    <color name="kr_post_header">#212121</color>
+    <color name="kr_fab">#FFDDB5</color>
+
+    <color name="kr_on_fab">#5B3A00</color>
+
+    <color name="kr_outline">#E3D8C4</color>
+
+    <color name="kr_thread_meta">#6E604A</color>
+
+    <color name="kr_post_header">#3A2F1C</color>
 
 </resources>
-

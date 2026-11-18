@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- clipToOutline：以 bg_thumb 的 12dp 圓角裁切圖片 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="128dp"
     android:layout_margin="4dp"
-    android:background="@drawable/bg_thumb">
+    android:background="@drawable/bg_thumb"
+    android:clipToOutline="true"
+    android:foreground="?attr/selectableItemBackground">
 
     <ImageView
         android:id="@+id/gridImage"

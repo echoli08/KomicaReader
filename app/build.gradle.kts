@@ -22,8 +22,8 @@ android {
         applicationId = "com.komica.reader"
         minSdk = 24
         targetSdk = 35
-        versionCode = 2261023
-        versionName = "V2.26.1023"
+        versionCode = 2261118
+        versionName = "V2.26.1118"
     }
 
     signingConfigs {

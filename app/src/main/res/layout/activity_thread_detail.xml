@@ -7,13 +7,12 @@
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
+        style="@style/Widget.Komica.Toolbar"
         android:layout_width="0dp"
         android:layout_height="64dp"
-        android:background="@color/kr_toolbar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:titleTextColor="@android:color/white"
         app:title="@string/title_thread_detail" />
 
     <ProgressBar
@@ -31,7 +30,9 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:gravity="center"
+        android:lineSpacingMultiplier="1.4"
         android:padding="24dp"
+        android:textAppearance="?attr/textAppearanceBodyMedium"
         android:textColor="@color/kr_muted"
         android:textSize="15sp"
         android:visibility="gone"
@@ -60,14 +61,15 @@
             android:paddingBottom="24dp" />
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
+    <!-- 引用預覽浮層：寬度與 id 維持（ThreadDetailActivity 以程式定位） -->
     <LinearLayout
         android:id="@+id/previewCard"
         android:layout_width="300dp"
         android:layout_height="wrap_content"
         android:background="@drawable/bg_quote_preview"
-        android:elevation="12dp"
+        android:elevation="8dp"
         android:orientation="vertical"
-        android:padding="12dp"
+        android:padding="16dp"
         android:visibility="gone"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
@@ -85,6 +87,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:lineSpacingMultiplier="1.4"
             android:maxLines="8"
             android:textColor="@color/kr_text"
             android:textSize="15sp" />
@@ -96,34 +99,37 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginBottom="12dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
         android:gravity="center_horizontal"
         android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
+        <!-- 48dp 觸控目標（fabCustomSize）＋ M3 primaryContainer 色與 on 圖示色 -->
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fabReply"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="6dp"
+            android:layout_marginBottom="8dp"
             android:contentDescription="@string/action_reply"
             android:src="@android:drawable/ic_menu_edit"
             app:backgroundTint="@color/kr_fab"
+            app:fabCustomSize="48dp"
             app:fabSize="mini"
-            app:tint="@android:color/white" />
+            app:tint="@color/kr_on_fab" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fabShare"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="6dp"
+            android:layout_marginBottom="8dp"
             android:contentDescription="@string/action_share"
             android:src="@android:drawable/ic_menu_share"
             app:backgroundTint="@color/kr_fab"
+            app:fabCustomSize="48dp"
             app:fabSize="mini"
-            app:tint="@android:color/white" />
+            app:tint="@color/kr_on_fab" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fabScrollDown"
@@ -132,7 +138,8 @@
             android:contentDescription="@string/action_scroll_bottom"
             android:src="@drawable/ic_arrow_down"
             app:backgroundTint="@color/kr_fab"
+            app:fabCustomSize="48dp"
             app:fabSize="mini"
-            app:tint="@android:color/white" />
+            app:tint="@color/kr_on_fab" />
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -20,6 +20,7 @@
         <activity android:name=".WebReplyActivity" android:exported="false" />
         <activity android:name=".ReplyActivity" android:exported="false" />
         <activity android:name=".ImagePreviewActivity" android:exported="false" />
+        <activity android:name=".ImageSplitActivity" android:exported="false" />
         <activity android:name=".HistoryActivity" android:exported="false" />
         <activity android:name=".SettingsActivity" android:exported="false" />
         <activity android:name=".ThreadDetailActivity" android:exported="false" />

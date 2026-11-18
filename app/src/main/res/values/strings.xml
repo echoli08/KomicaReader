@@ -6,6 +6,7 @@
     <string name="title_thread_detail">討論串</string>
     <string name="title_history">瀏覽歷史</string>
     <string name="title_image_grid">圖片牆</string>
+    <string name="title_image_split">頁面分割</string>
     <string name="title_verification">網站驗證</string>
     <string name="title_web_reply">網站回覆</string>
     <string name="title_reply">回覆</string>
@@ -36,6 +37,19 @@
     <string name="action_done_verification">我已完成驗證</string>
     <string name="action_slideshow">輪播</string>
     <string name="action_download">下載</string>
+    <string name="action_split">分割</string>
+    <string name="split_title">頁面分割</string>
+    <string name="split_left_right">左右分割</string>
+    <string name="split_top_bottom">上下頁分割</string>
+    <string name="split_content">內容</string>
+    <string name="split_page_counter">第 %1$d / %2$d 頁</string>
+    <string name="split_image_counter">圖片 %1$d/%2$d</string>
+    <string name="split_counter_pill">圖片 %1$d/%2$d · 第 %3$d/%4$d 頁</string>
+    <string name="split_back">返回</string>
+    <string name="split_prev_image">上一張</string>
+    <string name="split_next_image">下一張</string>
+    <string name="split_unsupported">此圖片格式不支援分割</string>
+    <string name="split_decode_failed">圖片載入失敗</string>
     <string name="label_thread_image">討論串圖片</string>
     <string name="label_thread_thumbnail">主題預覽圖</string>
     <string name="label_image_preview">圖片預覽</string>

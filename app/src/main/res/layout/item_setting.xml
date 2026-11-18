@@ -7,7 +7,7 @@
     android:gravity="center_vertical"
     android:minHeight="72dp"
     android:orientation="horizontal"
-    android:padding="12dp">
+    android:padding="16dp">
 
     <LinearLayout
         android:layout_width="0dp"
@@ -19,24 +19,23 @@
             android:id="@+id/settingTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/kr_text"
-            android:textSize="15sp"
-            android:textStyle="bold" />
+            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:textColor="@color/kr_text" />
 
         <TextView
             android:id="@+id/settingDescription"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:textColor="@color/kr_muted"
-            android:textSize="13sp" />
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textColor="@color/kr_muted" />
     </LinearLayout>
 
     <TextView
         android:id="@+id/settingValue"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="@color/kr_secondary"
-        android:textSize="14sp"
-        android:textStyle="bold" />
+        android:layout_marginStart="16dp"
+        android:textAppearance="?attr/textAppearanceLabelLarge"
+        android:textColor="@color/kr_secondary" />
 </LinearLayout>

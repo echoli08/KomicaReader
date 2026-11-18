@@ -7,14 +7,13 @@
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
+        style="@style/Widget.Komica.Toolbar"
         android:layout_width="0dp"
         android:layout_height="64dp"
-        android:background="@color/kr_toolbar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:title="@string/title_history"
-        app:titleTextColor="@android:color/white" />
+        app:title="@string/title_history" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/historyRecyclerView"

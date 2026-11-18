@@ -80,8 +80,6 @@ class BoardListAdapter(
         fun Bind(item: BoardListItem.BoardRow) {
             val board = item.board
             binding.boardName.text = board.name
-            binding.boardDescription.text = board.description.ifBlank { "${board.categoryName} 看板" }
-            binding.boardPath.text = board.url
             binding.favoriteButton.text = if (item.isFavorite) "★" else "☆"
             binding.root.setOnClickListener { onBoardClick(board) }
             binding.favoriteButton.setOnClickListener { onFavoriteClick(board) }

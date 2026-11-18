@@ -7,15 +7,14 @@
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
+        style="@style/Widget.Komica.Toolbar"
         android:layout_width="0dp"
         android:layout_height="64dp"
-        android:background="@color/kr_surface"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:navigationIcon="@android:drawable/ic_media_previous"
-        app:title="@string/title_image_grid"
-        app:titleTextColor="@color/kr_text" />
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:title="@string/title_image_grid" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/imageGrid"

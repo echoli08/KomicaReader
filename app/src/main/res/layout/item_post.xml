@@ -1,16 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 貼文卡：維持 LinearLayout + android:background=@drawable/bg_card，
+     ScrollToPost 的引用跳轉高亮以純色暫時覆蓋背景後還原 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginTop="8dp"
     android:background="@drawable/bg_card"
     android:orientation="vertical"
-    android:padding="12dp">
+    android:padding="16dp">
 
     <TextView
         android:id="@+id/postHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:textAppearance="?attr/textAppearanceBodySmall"
         android:textColor="@color/kr_post_header"
         android:textSize="13sp"
         android:textStyle="bold" />
@@ -31,6 +34,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
+        android:lineSpacingMultiplier="1.5"
         android:textColor="@color/kr_text"
         android:textSize="16sp" />
 </LinearLayout>

@@ -1,6 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <solid android:color="@color/kr_surface" />
-    <stroke android:width="1dp" android:color="#DDDDDD" />
-    <corners android:radius="8dp" />
-</shape>
+<!-- 卡片：M3 surface + outline 描邊 + bounded ripple（按下回饋，state layer）。
+     維持 shape 型別：ThreadDetailActivity.ScrollToPost 會暫時以純色
+     覆蓋 itemView.background 後還原此 drawable，結構不可改為其他容器。 -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="?attr/colorControlHighlight">
+    <item>
+        <shape>
+            <solid android:color="@color/kr_surface" />
+            <stroke
+                android:width="1dp"
+                android:color="@color/kr_outline" />
+            <corners android:radius="@dimen/corner_card" />
+        </shape>
+    </item>
+</ripple>

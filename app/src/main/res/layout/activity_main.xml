@@ -7,16 +7,15 @@
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
+        style="@style/Widget.Komica.Toolbar"
         android:layout_width="0dp"
         android:layout_height="64dp"
-        android:background="@color/kr_toolbar"
         android:paddingStart="16dp"
         android:paddingEnd="8dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:title="@string/title_home"
-        app:titleTextColor="@android:color/white" />
+        app:title="@string/title_home" />
 
     <ProgressBar
         android:id="@+id/progressBar"
@@ -33,7 +32,9 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:gravity="center"
+        android:lineSpacingMultiplier="1.4"
         android:padding="24dp"
+        android:textAppearance="?attr/textAppearanceBodyMedium"
         android:textColor="@color/kr_muted"
         android:textSize="15sp"
         android:visibility="gone"

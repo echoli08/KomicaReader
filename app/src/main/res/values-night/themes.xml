@@ -1,22 +1,70 @@
 <resources>
 
-    <style name="Theme.KomicaReader" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <!-- 深色模式：與淺色共用同一組 Material 3 色彩角色映射（values-night/colors.xml） -->
 
-        <item name="android:fontFamily">sans</item>
-
-        <item name="android:windowLightStatusBar">false</item>
-
-        <item name="android:statusBarColor">@color/kr_background</item>
-
-        <item name="android:navigationBarColor">@color/kr_surface</item>
-
-        <item name="android:colorAccent">@color/kr_primary</item>
+    <style name="Theme.KomicaReader" parent="Theme.Material3.DayNight.NoActionBar">
 
         <item name="colorPrimary">@color/kr_primary</item>
 
+        <item name="colorOnPrimary">@color/kr_on_primary</item>
+
+        <item name="colorPrimaryContainer">@color/kr_fab</item>
+
+        <item name="colorOnPrimaryContainer">@color/kr_on_fab</item>
+
         <item name="colorSecondary">@color/kr_secondary</item>
 
+        <item name="colorSecondaryContainer">@color/kr_fab</item>
+
+        <item name="colorOnSecondaryContainer">@color/kr_on_fab</item>
+
+        <item name="android:colorBackground">@color/kr_background</item>
+
+        <item name="colorOnBackground">@color/kr_text</item>
+
+        <item name="colorSurface">@color/kr_surface</item>
+
+        <item name="colorOnSurface">@color/kr_text</item>
+
+        <item name="colorSurfaceVariant">@color/kr_thumbnail_background</item>
+
+        <item name="colorOnSurfaceVariant">@color/kr_muted</item>
+
+        <item name="colorOutline">@color/kr_outline</item>
+
+        <item name="android:statusBarColor">@color/kr_toolbar</item>
+
+        <item name="android:navigationBarColor">@color/kr_surface</item>
+
+        <item name="android:windowLightStatusBar">false</item>
+
+        <item name="android:windowLightNavigationBar">false</item>
+
         <item name="android:windowNoTitle">true</item>
+
+    </style>
+
+    <style name="Widget.Komica.Toolbar" parent="Widget.Material3.Toolbar">
+
+        <item name="android:background">@color/kr_toolbar</item>
+
+        <item name="titleTextColor">@android:color/white</item>
+
+        <item name="subtitleTextColor">#B3FFFFFF</item>
+
+        <item name="navigationIconTint">@android:color/white</item>
+
+        <item name="android:elevation">0dp</item>
+
+        <item name="android:theme">@style/ThemeOverlay.Komica.Toolbar</item>
+
+    </style>
+
+    <style name="ThemeOverlay.Komica.Toolbar" parent="ThemeOverlay.Material3.Dark.ActionBar">
+
+        <item name="colorControlNormal">@android:color/white</item>
+
+        <item name="actionMenuTextColor">@android:color/white</item>
 
     </style>
 

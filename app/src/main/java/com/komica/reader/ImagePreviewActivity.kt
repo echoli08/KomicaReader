@@ -16,6 +16,7 @@ import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.komica.reader.data.AppSettings
 import com.komica.reader.data.ImageStore
 import com.komica.reader.adapter.ImagePagerAdapter
@@ -67,6 +68,7 @@ class ImagePreviewActivity : AppCompatActivity() {
         binding.downloadButton.setOnClickListener { DownloadImage(CurrentImageUrl()) }
         binding.shareButton.setOnClickListener { ShareImage(CurrentImageUrl()) }
         binding.slideshowButton.setOnClickListener { ToggleSlideshow() }
+        binding.splitButton.setOnClickListener { ShowSplitDialog() }
         UpdateCounter(initialPosition)
     }
 
@@ -118,6 +120,33 @@ class ImagePreviewActivity : AppCompatActivity() {
                 startActivity(Intent.createChooser(intent, "分享圖片"))
             }
         }
+    }
+
+    private fun ShowSplitDialog() {
+        val imageUrl = CurrentImageUrl()
+        if (!IsSplittable(imageUrl)) {
+            Toast.makeText(this, R.string.split_unsupported, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val modes = arrayOf(getString(R.string.split_left_right), getString(R.string.split_top_bottom))
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.split_title)
+            .setItems(modes) { _, which ->
+                val mode = if (which == 0) ImageSplitActivity.ModeLeftRight else ImageSplitActivity.ModeTopBottom
+                startActivity(Intent(this, ImageSplitActivity::class.java).apply {
+                    putStringArrayListExtra(ImageSplitActivity.ExtraImageUrls, ArrayList(imageUrls))
+                    putExtra(ImageSplitActivity.ExtraPosition, binding.viewPager.currentItem)
+                    putExtra(ImageSplitActivity.ExtraUrl, imageUrl)
+                    putExtra(ImageSplitActivity.ExtraMode, mode)
+                })
+            }
+            .show()
+    }
+
+    // 動畫/影格格式無法以 BitmapRegionDecoder 分割，僅接受靜態圖。
+    private fun IsSplittable(imageUrl: String): Boolean {
+        val extension = imageUrl.substringAfterLast('.', "").lowercase().substringBefore('?')
+        return extension !in UnsupportedSplitExtensions
     }
 
     private fun SetWallpaper(imageUrl: String) {
@@ -177,5 +206,6 @@ class ImagePreviewActivity : AppCompatActivity() {
         const val ExtraImageUrls = "image_urls"
         const val ExtraPosition = "position"
         private const val DoubleRightSwipeWindowMs = 700L
+        private val UnsupportedSplitExtensions = setOf("gif", "webm", "mp4")
     }
 }

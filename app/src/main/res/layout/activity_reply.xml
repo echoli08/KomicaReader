@@ -7,15 +7,14 @@
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
+        style="@style/Widget.Komica.Toolbar"
         android:layout_width="0dp"
         android:layout_height="64dp"
-        android:background="@color/kr_toolbar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:navigationIcon="@android:drawable/ic_media_previous"
-        app:title="@string/title_reply"
-        app:titleTextColor="@android:color/white" />
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:title="@string/title_reply" />
 
     <ProgressBar
         android:id="@+id/progressBar"
@@ -47,16 +46,17 @@
                 android:id="@+id/statusText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color/kr_muted"
-                android:textSize="14sp" />
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="@color/kr_muted" />
 
             <EditText
                 android:id="@+id/nameEdit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="16dp"
                 android:hint="@string/hint_name"
                 android:inputType="textPersonName"
+                android:minHeight="48dp"
                 android:textColor="@color/kr_text"
                 android:textColorHint="@color/kr_muted" />
 
@@ -64,8 +64,10 @@
                 android:id="@+id/emailEdit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
                 android:hint="@string/hint_email"
                 android:inputType="textEmailAddress"
+                android:minHeight="48dp"
                 android:textColor="@color/kr_text"
                 android:textColorHint="@color/kr_muted" />
 
@@ -73,8 +75,10 @@
                 android:id="@+id/titleEdit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
                 android:hint="@string/hint_title"
                 android:inputType="text"
+                android:minHeight="48dp"
                 android:textColor="@color/kr_text"
                 android:textColorHint="@color/kr_muted" />
 
@@ -82,6 +86,7 @@
                 android:id="@+id/contentEdit"
                 android:layout_width="match_parent"
                 android:layout_height="180dp"
+                android:layout_marginTop="16dp"
                 android:gravity="top|start"
                 android:hint="@string/hint_reply_content"
                 android:inputType="textMultiLine|textCapSentences"
@@ -92,38 +97,46 @@
                 android:id="@+id/passwordEdit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
                 android:hint="@string/hint_delete_password"
                 android:inputType="textPassword"
+                android:minHeight="48dp"
                 android:textColor="@color/kr_text"
                 android:textColorHint="@color/kr_muted" />
 
             <Button
                 android:id="@+id/imageButton"
+                style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="16dp"
+                android:minHeight="48dp"
                 android:text="@string/action_choose_image" />
 
             <TextView
                 android:id="@+id/imageText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:textColor="@color/kr_muted"
-                android:textSize="13sp" />
+                android:layout_marginTop="8dp"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="@color/kr_muted" />
 
+            <!-- 畫面唯一主要動作：filled primary -->
             <Button
                 android:id="@+id/submitButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
+                android:layout_marginTop="24dp"
+                android:minHeight="48dp"
                 android:text="@string/action_submit_reply" />
 
             <Button
                 android:id="@+id/browserButton"
+                style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
+                android:minHeight="48dp"
                 android:text="@string/action_use_web_reply" />
         </LinearLayout>
     </ScrollView>
