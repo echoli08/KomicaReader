@@ -24,7 +24,7 @@
         android:textColor="@android:color/white"
         android:visibility="gone" />
 
-    <!-- 全螢幕浮動控制：左上返回、頂中頁碼；頂部容器另加狀態列/切口 inset。 -->
+    <!-- 全螢幕浮動控制：左上返回、右上隱藏、頂中頁碼；頂部容器另加狀態列/切口 inset。 -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/topControls"
         android:layout_width="match_parent"
@@ -42,6 +42,16 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
+        <ImageButton
+            android:id="@+id/controlsToggleButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_split_circle"
+            android:contentDescription="@string/split_hide_controls"
+            android:src="@drawable/ic_arrow_down"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
         <TextView
             android:id="@+id/counterPill"
             android:layout_width="wrap_content"
@@ -51,9 +61,10 @@
             android:paddingVertical="6dp"
             android:textColor="@android:color/white"
             android:textSize="14sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintBottom_toBottomOf="@id/backButton"
+            app:layout_constraintEnd_toStartOf="@id/controlsToggleButton"
+            app:layout_constraintStart_toEndOf="@id/backButton"
+            app:layout_constraintTop_toTopOf="@id/backButton" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <!-- 底部浮動列：上一張／模式／下一張；另加導覽列 inset 避免被手勢列遮蓋。 -->
@@ -110,4 +121,17 @@
             android:textColor="@android:color/white"
             app:cornerRadius="24dp" />
     </LinearLayout>
+
+    <!-- 介面隱藏時才出現的還原按鈕：圖示旋轉 180° 為向上箭頭；與頂部控制同一 top 偏移。 -->
+    <ImageButton
+        android:id="@+id/restoreControlsButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="top|end"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/bg_split_circle"
+        android:contentDescription="@string/split_show_controls"
+        android:rotation="180"
+        android:src="@drawable/ic_arrow_down"
+        android:visibility="gone" />
 </FrameLayout>

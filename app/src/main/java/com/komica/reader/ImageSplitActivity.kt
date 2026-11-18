@@ -5,6 +5,7 @@ import android.graphics.Rect
 import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -15,9 +16,11 @@ import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.komica.reader.adapter.ImageSplitPagerAdapter
 import com.komica.reader.data.AppSettings
 import com.komica.reader.databinding.ActivityImageSplitBinding
+import com.komica.reader.databinding.DialogSplitPagesBinding
 import com.komica.reader.util.ImageContentAnalyzer
 import com.komica.reader.util.WindowInsetsUtil
 import com.komica.reader.widget.ZoomImageView
@@ -42,6 +45,9 @@ class ImageSplitActivity : AppCompatActivity() {
     private var imageWidth = 0
     private var imageHeight = 0
     private var contentGutters: List<ImageContentAnalyzer.Gutter> = emptyList()
+    private var manualPageCount: Int? = null
+    // 使用者指定頁數後記住的單頁比例（頁高 / 圖寬），切換下一張圖時據此重算頁數。
+    private var manualPageRatio: Float? = null
     private var pagerAdapter: ImageSplitPagerAdapter? = null
     private var loadJob: Job? = null
 
@@ -73,7 +79,11 @@ class ImageSplitActivity : AppCompatActivity() {
         if (imageUrls.isNotEmpty()) {
             imageIndex = imageIndex.coerceIn(imageUrls.indices)
         }
-        currentMode = intent.getStringExtra(ExtraMode) ?: ModeLeftRight
+        currentMode = when (intent.getStringExtra(ExtraMode)) {
+            ModeTopBottom -> ModeTopBottom
+            ModeNone -> ModeNone
+            else -> ModeLeftRight
+        }
 
         if (imageUrls.isEmpty()) {
             finish()
@@ -83,15 +93,18 @@ class ImageSplitActivity : AppCompatActivity() {
         binding.backButton.setOnClickListener { finish() }
         binding.prevImageButton.setOnClickListener { SwitchImage(-1) }
         binding.nextImageButton.setOnClickListener { SwitchImage(1) }
-        binding.modeButton.setOnClickListener { ToggleMode() }
+        binding.modeButton.setOnClickListener { ShowModeDialog() }
+        binding.controlsToggleButton.setOnClickListener { HideControls() }
+        binding.restoreControlsButton.setOnClickListener { ShowControls() }
 
         binding.splitPager.isUserInputEnabled = false
         binding.splitPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) = UpdateCounterPill()
         })
 
-        // 頂部控制避開狀態列／瀏海，底部列避開手勢導覽列。
+        // 頂部控制與還原按鈕避開狀態列／瀏海，底部列避開手勢導覽列。
         WindowInsetsUtil.ApplyTopMarginInsets(binding.topControls, extraTopDp = 8)
+        WindowInsetsUtil.ApplyTopMarginInsets(binding.restoreControlsButton, extraTopDp = 8)
         ApplyBottomInset()
 
         LoadCurrentImage()
@@ -125,6 +138,10 @@ class ImageSplitActivity : AppCompatActivity() {
             imageWidth = resolved.width
             imageHeight = resolved.height
             contentGutters = resolved.gutters
+            // 指定頁數是依目前圖片比例記住的；換圖時用同一比例重算此圖頁數。
+            if (currentMode == ModeTopBottom && manualPageCount != null && manualPageRatio != null) {
+                manualPageCount = PagesForRatio(imageWidth, imageHeight)
+            }
             awaitPagerLayout()
             val regions = ComputeRegions(currentMode)
             if (regions.isEmpty()) {
@@ -154,13 +171,114 @@ class ImageSplitActivity : AppCompatActivity() {
         UpdateCounterPill()
     }
 
-    // 模式按鈕切換左右／上下，保留目前圖片並重算分頁。
-    private fun ToggleMode() {
-        if (imageWidth <= 0 || imageHeight <= 0) return
-        currentMode = if (currentMode == ModeLeftRight) ModeTopBottom else ModeLeftRight
-        val regions = ComputeRegions(currentMode)
-        if (regions.isNotEmpty()) SetupPager(regions)
+    // 模式按鈕改為開啟模式對話框，保留目前圖片並依選擇重算分頁。
+    private fun ShowModeDialog() {
+        val items = arrayOf(
+            getString(R.string.split_left_right),
+            getString(R.string.split_mode_top_auto),
+            getString(R.string.split_mode_top_manual),
+            getString(R.string.split_mode_none)
+        )
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.split_mode_title)
+            .setItems(items) { _, which ->
+                when (which) {
+                    0 -> {
+                        currentMode = ModeLeftRight
+                        RecomputeAndSetup()
+                    }
+                    1 -> {
+                        currentMode = ModeTopBottom
+                        manualPageCount = null
+                        RecomputeAndSetup()
+                    }
+                    2 -> ShowManualPagesDialog()
+                    3 -> {
+                        currentMode = ModeNone
+                        RecomputeAndSetup()
+                    }
+                }
+            }
+            .show()
+    }
+
+    // 指定頁數對話框：預填目前比例換算的頁數或自動估算頁數；套用時僅接受 1..100。
+    private fun ShowManualPagesDialog() {
+        val dialogBinding = DialogSplitPagesBinding.inflate(layoutInflater)
+        val prefill = when {
+            imageWidth > 0 && imageHeight > 0 && manualPageRatio != null ->
+                PagesForRatio(imageWidth, imageHeight)
+            manualPageCount != null -> manualPageCount!!
+            else -> EstimateAutoPageCount()
+        }
+        dialogBinding.pageCountEdit.setText(prefill.toString())
+        dialogBinding.pageCountEdit.setSelection(dialogBinding.pageCountEdit.text?.length ?: 0)
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.split_manual_pages_title)
+            .setView(dialogBinding.root)
+            .setPositiveButton(R.string.split_apply) { _, _ ->
+                val parsed = dialogBinding.pageCountEdit.text?.toString()?.trim()?.toIntOrNull()
+                if (parsed == null || parsed < 1 || parsed > MaxPages) {
+                    Toast.makeText(this, R.string.split_pages_invalid, Toast.LENGTH_SHORT).show()
+                } else {
+                    manualPageCount = parsed
+                    manualPageRatio = PageRatio(imageWidth, imageHeight, parsed)
+                    currentMode = ModeTopBottom
+                    RecomputeAndSetup()
+                    Toast.makeText(this, R.string.split_ratio_saved, Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(R.string.split_cancel, null)
+            .show()
+    }
+
+    private fun RecomputeAndSetup() {
+        if (imageWidth > 0 && imageHeight > 0) {
+            val regions = ComputeRegions(currentMode)
+            if (regions.isNotEmpty()) SetupPager(regions)
+        }
         UpdateControls()
+    }
+
+    // 目前自動（內容感知／平均）上下分割會產生的頁數，供指定頁數對話框預填。
+    // 護欄判定不需分割時回傳 1，讓預填反映實際會顯示的單頁。
+    private fun EstimateAutoPageCount(): Int {
+        if (imageWidth <= 0 || imageHeight <= 0) return 1
+        if (!NeedsTopBottomSplit(imageWidth, imageHeight)) return 1
+        val ideal = IdealPageHeight()
+        if (ideal <= 0) return 1
+        return AutoTopBottomRegions(imageWidth, imageHeight, ideal).size.coerceAtLeast(1)
+    }
+
+    // 由指定頁數換算單頁比例（頁高 / 圖寬），供下一張需要分割的圖片沿用。
+    private fun PageRatio(width: Int, height: Int, pages: Int): Float? {
+        if (width <= 0 || height <= 0 || pages <= 0) return null
+        return height.toFloat() / (pages.toFloat() * width.toFloat())
+    }
+
+    // 依記住的比例換算目前圖片頁數；微減誤差避免整數邊界被 ceil 多進一頁。
+    private fun PagesForRatio(width: Int, height: Int): Int {
+        if (width <= 0 || height <= 0) return manualPageCount ?: 1
+        val ratio = manualPageRatio ?: return manualPageCount ?: 1
+        val pageHeight = ratio * width.toFloat()
+        if (pageHeight <= 0f) return 1
+        return ceil(height.toFloat() / pageHeight - 1e-4f)
+            .toInt()
+            .coerceIn(1, minOf(MaxPages, height))
+    }
+
+    private fun HideControls() {
+        binding.topControls.visibility = View.GONE
+        binding.bottomBar.visibility = View.GONE
+        binding.restoreControlsButton.visibility = View.VISIBLE
+        // 還原按鈕初始為 gone，需在顯示時重新分派 inset，才會套用與頂部控制相同的 top 偏移。
+        ViewCompat.requestApplyInsets(binding.restoreControlsButton)
+    }
+
+    private fun ShowControls() {
+        binding.topControls.visibility = View.VISIBLE
+        binding.bottomBar.visibility = View.VISIBLE
+        binding.restoreControlsButton.visibility = View.GONE
     }
 
     // 上一張／下一張：跳過不支援分割的格式；找不到則維持停用。
@@ -186,25 +304,78 @@ class ImageSplitActivity : AppCompatActivity() {
         if (width <= 0 || height <= 0) return emptyList()
         return when (mode) {
             ModeTopBottom -> {
-                val pagerWidth = binding.splitPager.width
-                val pagerHeight = binding.splitPager.height
-                if (pagerWidth <= 0 || pagerHeight <= 0) return emptyList()
-                val scale = pagerWidth.toFloat() / width.toFloat()
-                val idealPageHeight = ceil(pagerHeight / scale).toInt().coerceAtLeast(1)
-                if (contentGutters.isEmpty()) {
-                    EvenTopBottomRegions(width, height, idealPageHeight)
-                } else {
-                    // 找不到可行路徑時退回平均分配，避免產生過大的單頁。
-                    ContentAwareRegions(width, height, idealPageHeight)
-                        .ifEmpty { EvenTopBottomRegions(width, height, idealPageHeight) }
+                val idealPageHeight = IdealPageHeight()
+                if (idealPageHeight <= 0) return emptyList()
+                val manual = manualPageCount
+                when {
+                    // 自動護欄優先：比例正常就不分割，即使有指定頁數也不覆蓋。
+                    !NeedsTopBottomSplit(width, height) -> listOf(Rect(0, 0, width, height))
+                    // 指定頁數：使用者明確指定頁數時，等分為 N 頁。
+                    manual != null -> ManualTopBottomRegions(width, height, manual)
+                    // 自動模式：依內容感知 DP／平均分配。
+                    else -> AutoTopBottomRegions(width, height, idealPageHeight)
                 }
             }
+            ModeNone -> listOf(Rect(0, 0, width, height))
             else -> {
                 // 繁體中文註解：左右分割依右頁在前的閱讀順序呈現（先右再左）。
-                if (width < 2) listOf(Rect(0, 0, width, height))
+                // 護欄：非橫向跨頁（寬未達高 × 1.2）不左右切分，避免把一般直幅／方形圖對半切。
+                if (width < 2 || !NeedsLeftRightSplit(width, height)) listOf(Rect(0, 0, width, height))
                 else listOf(Rect(width / 2, 0, width, height), Rect(0, 0, width / 2, height))
             }
         }
+    }
+
+    // 左右分割護欄（一般比例門檻）：只有寬 > 高 × 1.2 的橫向跨頁才值得左右切分。
+    private fun NeedsLeftRightSplit(width: Int, height: Int): Boolean {
+        if (width <= 0 || height <= 0) return true
+        return width > height * NoSplitWidthRatio
+    }
+
+    // 上下自動護欄（一般比例門檻）：縮放到 pager 寬度後，只有高 > pager 高 × 1.2 才需要上下分割。
+    // pager 尚未 layout（尺寸為 0）時不阻擋，退回既有行為。
+    private fun NeedsTopBottomSplit(width: Int, height: Int): Boolean {
+        if (width <= 0 || height <= 0) return true
+        val pagerWidth = binding.splitPager.width
+        val pagerHeight = binding.splitPager.height
+        if (pagerWidth <= 0 || pagerHeight <= 0) return true
+        val scaledHeight = height.toFloat() * pagerWidth.toFloat() / width.toFloat()
+        return scaledHeight > pagerHeight * NoSplitHeightRatio
+    }
+
+    // 上下頁分割的理想一頁高度（約等於一屏可顯示的原始像素高度）。
+    private fun IdealPageHeight(): Int {
+        val pagerWidth = binding.splitPager.width
+        val pagerHeight = binding.splitPager.height
+        if (pagerWidth <= 0 || pagerHeight <= 0 || imageWidth <= 0) return 0
+        val scale = pagerWidth.toFloat() / imageWidth.toFloat()
+        return ceil(pagerHeight / scale).toInt().coerceAtLeast(1)
+    }
+
+    // 自動上下頁：有留白帶走內容感知 DP，否則或 DP 無解時退回平均分配。
+    private fun AutoTopBottomRegions(width: Int, height: Int, idealPageHeight: Int): List<Rect> {
+        return if (contentGutters.isEmpty()) {
+            EvenTopBottomRegions(width, height, idealPageHeight)
+        } else {
+            // 找不到可行路徑時退回平均分配，避免產生過大的單頁。
+            ContentAwareRegions(width, height, idealPageHeight)
+                .ifEmpty { EvenTopBottomRegions(width, height, idealPageHeight) }
+        }
+    }
+
+    // 指定頁數：將圖片高度平均分成 exactly N 頁（N 夾在 1..100 與圖片高度內）。
+    private fun ManualTopBottomRegions(width: Int, height: Int, requestedPages: Int): List<Rect> {
+        val pages = requestedPages.coerceIn(1, minOf(MaxPages, height))
+        val base = height / pages
+        val remainder = height % pages
+        val regions = ArrayList<Rect>(pages)
+        var y = 0
+        for (i in 0 until pages) {
+            val pageHeight = base + if (i < remainder) 1 else 0
+            regions.add(Rect(0, y, width, y + pageHeight))
+            y += pageHeight
+        }
+        return regions
     }
 
     // 後備：無空白分隔帶時，將圖片高度平均分配到各頁（每頁相差至多 1px，總和剛好覆蓋全高）。
@@ -289,11 +460,21 @@ class ImageSplitActivity : AppCompatActivity() {
     }
 
     private fun UpdateControls() {
-        binding.modeButton.text =
-            getString(if (currentMode == ModeLeftRight) R.string.split_left_right else R.string.split_top_bottom)
+        binding.modeButton.text = ModeButtonLabel()
         binding.prevImageButton.isEnabled = FindSplittableImage(imageIndex, -1) >= 0
         binding.nextImageButton.isEnabled = FindSplittableImage(imageIndex, 1) >= 0
         UpdateCounterPill()
+    }
+
+    // 模式按鈕短標籤：左右 / 上下自動 / 上下 N 頁 / 還原。
+    private fun ModeButtonLabel(): String = when (currentMode) {
+        ModeLeftRight -> getString(R.string.split_mode_lr_short)
+        ModeNone -> getString(R.string.split_mode_none_short)
+        else -> {
+            val manual = manualPageCount
+            if (manual != null) getString(R.string.split_mode_tb_manual_short, manual)
+            else getString(R.string.split_mode_tb_auto_short)
+        }
     }
 
     private fun UpdateCounterPill() {
@@ -306,7 +487,25 @@ class ImageSplitActivity : AppCompatActivity() {
                 binding.splitPager.currentItem + 1,
                 total
             )
-            if (currentMode == ModeTopBottom) "$pill（${getString(R.string.split_content)}）" else pill
+            val suffix = when (currentMode) {
+                ModeNone -> ""
+                ModeLeftRight ->
+                    // 左右模式護欄阻擋時提示不需分割，否則不加後綴。
+                    if (NeedsLeftRightSplit(imageWidth, imageHeight)) ""
+                    else "（${getString(R.string.split_not_needed)}）"
+                else -> {
+                    // 上下頁：先判斷比例是否需要分割；比例正常時即使有指定頁數也不分割。
+                    when {
+                        !NeedsTopBottomSplit(imageWidth, imageHeight) ->
+                            "（${getString(R.string.split_not_needed)}）"
+                        manualPageCount != null ->
+                            "（${getString(R.string.split_ratio_suffix)}）"
+                        else ->
+                            "（${getString(R.string.split_content)}）"
+                    }
+                }
+            }
+            pill + suffix
         } else {
             getString(R.string.split_image_counter, imageIndex + 1, imageUrls.size)
         }
@@ -413,9 +612,13 @@ class ImageSplitActivity : AppCompatActivity() {
         const val ExtraMode = "split_mode"
         const val ModeLeftRight = "left_right"
         const val ModeTopBottom = "top_bottom"
+        const val ModeNone = "none"
         private const val MaxPages = 100
         private const val MinPageRatio = 0.62f
         private const val MaxPageRatio = 1.45f
+        // 分割護欄的一般比例門檻：左右需寬 > 高 × 1.2；上下自動需縮放後高 > 一屏高 × 1.2。
+        private const val NoSplitWidthRatio = 1.2f
+        private const val NoSplitHeightRatio = 1.2f
         private val UnsupportedSplitExtensions = setOf("gif", "webm", "mp4")
     }
 }
