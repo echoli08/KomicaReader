@@ -17,12 +17,6 @@ Android：minSdk 24、targetSdk 35、compileSdk 35
 - **其他**：瀏覽歷史、深色／淺色主題、字體與縮放設定、我的最愛 JSON 匯出／還原。
 - **介面**：Material Design 3、琥珀品牌色系、完整深色模式與 48dp 觸控目標。
 
-## 版本與簽章
-
-- `debug` 與 `release` 皆讀取專案根目錄的 `keystore.properties`（未進版控），使用同一把固定金鑰。
-- 金鑰檔與密碼不會提交到 Git；換機器建置時請一併帶上 `keystore.properties` 與 `app/keystore/` 內的金鑰，否則會改用該機器的預設 debug 金鑰，無法覆蓋安裝既有版本。
-- 若沒有金鑰，`keystore.properties` 不存在時仍可編譯，但會使用本機預設 debug 簽章。
-
 ## 編譯方式
 
 需求：JDK 17 以上、Android SDK 35。
